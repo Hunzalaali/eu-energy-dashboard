@@ -56,9 +56,6 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data }) => {
                     <Legend />
                 </RadarChart>
             </ResponsiveContainer>
-            <Text size="xs" c="dimmed" mt="sm">
-                Values are normalized (0-1) relative to the min/max of the current year to show relative strengths.
-            </Text>
         </Paper>
     );
 };

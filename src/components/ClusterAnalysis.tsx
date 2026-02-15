@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Paper, Title, Text, Group, Stack, Grid, SegmentedControl } from '@mantine/core';
-import { type ClusteredData } from '../services/analysis';
+import { type ClusteredData, reclusterData } from '../services/analysis';
 import ClusterRadarChart from './ClusterRadarChart';
 
 interface ClusterAnalysisProps {
@@ -11,17 +11,28 @@ interface ClusterAnalysisProps {
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
 const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
-    const [method, setMethod] = useState<'pca' | 'tsne' | 'umap'>('pca');
+    const [method, setMethod] = useState<'tsne' | 'umap'>('tsne');
 
     const getAxisKeys = () => {
         switch (method) {
             case 'tsne': return { x: 'tsneX', y: 'tsneY', label: 't-SNE' };
-            case 'umap': return { x: 'umapX', y: 'umapY', label: 'UMAP' };
-            default: return { x: 'PC1', y: 'PC2', label: 'PCA' };
+            default: return { x: 'umapX', y: 'umapY', label: 'UMAP' };
         }
     };
 
     const { x, y, label } = getAxisKeys();
+
+    const displayData = React.useMemo(() => {
+        if (!data || data.length === 0) return [];
+
+        // For t-SNE and UMAP, users often expect the clusters to match the visual grouping.
+        // So we re-cluster based on the projected coordinates.
+        const k = new Set(data.map(d => d.cluster)).size || 4;
+        return reclusterData(data, [x, y], k);
+    }, [data, method, x, y]);
+
+    // Use displayData instead of data for all charts below
+    const chartData = displayData;
 
     return (
         <Stack gap="lg">
@@ -34,7 +45,6 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                                 value={method}
                                 onChange={(value) => setMethod(value as any)}
                                 data={[
-                                    { label: 'PCA', value: 'pca' },
                                     { label: 't-SNE', value: 'tsne' },
                                     { label: 'UMAP', value: 'umap' },
                                 ]}
@@ -62,8 +72,8 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                                     return null;
                                 }} />
                                 <Legend />
-                                <Scatter name="Countries" data={data} fill="#8884d8">
-                                    {data.map((entry, index) => (
+                                <Scatter name="Countries" data={chartData}>
+                                    {chartData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[entry.cluster % COLORS.length]} />
                                     ))}
                                 </Scatter>
@@ -71,7 +81,7 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                         </ResponsiveContainer>
 
                         <Group mt="md" gap="xs" wrap="wrap">
-                            {Array.from(new Set(data.map(d => d.cluster))).sort().map(cluster => (
+                            {Array.from(new Set(chartData.map(d => d.cluster))).sort().map(cluster => (
                                 <Group key={cluster} gap="xs">
                                     <div style={{ width: 12, height: 12, backgroundColor: COLORS[cluster % COLORS.length], borderRadius: '50%' }} />
                                     <Text size="xs" c="dimmed">
@@ -84,21 +94,21 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                 </Grid.Col>
 
                 <Grid.Col span={{ base: 12, md: 5 }}>
-                    <ClusterRadarChart data={data} />
+                    <ClusterRadarChart data={chartData} />
                 </Grid.Col>
             </Grid>
 
             <Paper shadow="xs" p="md" withBorder>
                 <Title order={4} mb="sm">Cluster Membership</Title>
                 <Grid>
-                    {Array.from(new Set(data.map(d => d.cluster))).sort().map(cluster => (
+                    {Array.from(new Set(chartData.map(d => d.cluster))).sort().map(cluster => (
                         <Grid.Col key={cluster} span={{ base: 12, sm: 6, lg: 3 }}>
                             <Group gap="xs" mb={5}>
                                 <div style={{ width: 12, height: 12, backgroundColor: COLORS[cluster % COLORS.length], borderRadius: '50%' }} />
                                 <Text fw={600}>Cluster {cluster}</Text>
                             </Group>
                             <Text size="sm" style={{ lineHeight: 1.4 }}>
-                                {data.filter(d => d.cluster === cluster).map(d => d.country).join(', ')}
+                                {chartData.filter(d => d.cluster === cluster).map(d => d.country).join(', ')}
                             </Text>
                         </Grid.Col>
                     ))}

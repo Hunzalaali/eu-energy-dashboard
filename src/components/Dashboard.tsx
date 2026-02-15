@@ -39,8 +39,8 @@ export const Dashboard = () => {
     const minYear = useMemo(() => Math.min(...(data.map(d => d.year) || [2010])), [data]);
 
     return (
-        <AppShell header={{ height: 100 }} padding="md">
-            <AppShell.Header p="md">
+        <AppShell header={{ height: 90 }} padding="sm">
+            <AppShell.Header p="sm">
                 <Group justify="space-between">
                     <Title order={3}>EU Energy Transition Patterns</Title>
                     <Group>

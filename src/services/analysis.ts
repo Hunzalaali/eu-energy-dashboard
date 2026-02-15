@@ -1,7 +1,6 @@
 
 import Papa from 'papaparse';
 import { kmeans } from 'ml-kmeans';
-import { PCA } from 'ml-pca';
 import { UMAP } from 'umap-js';
 import { TSNE } from '@keckelt/tsne';
 
@@ -22,8 +21,6 @@ export interface EnergyData {
 
 export interface ClusteredData extends EnergyData {
     cluster: number;
-    PC1: number;
-    PC2: number;
     tsneX?: number;
     tsneY?: number;
     umapX?: number;
@@ -69,9 +66,10 @@ export const performAnalysis = (data: EnergyData[], year: number, k: number = 4)
     ) as number[][];
 
     // Check if we have enough data
+    // Check if we have enough data
     if (dataset.length < k) {
         console.warn("Not enough data points for clustering");
-        return yearData.map(d => ({ ...d, cluster: 0, PC1: 0, PC2: 0 }));
+        return yearData.map(d => ({ ...d, cluster: 0 }));
     }
 
     // Standardization (Z-score normalization)
@@ -92,10 +90,6 @@ export const performAnalysis = (data: EnergyData[], year: number, k: number = 4)
     // K-Means Clustering
     const clusteringResult = kmeans(scaledData, k, { initialization: 'kmeans++' });
     const clusters = clusteringResult.clusters;
-
-    // PCA
-    const pca = new PCA(scaledData);
-    const projected = pca.predict(scaledData, { nComponents: 2 });
 
     // t-SNE
     let tsneResults: number[][] = [];
@@ -137,8 +131,6 @@ export const performAnalysis = (data: EnergyData[], year: number, k: number = 4)
     return yearData.map((d, i) => ({
         ...d,
         cluster: clusters[i],
-        PC1: projected.get(i, 0),
-        PC2: projected.get(i, 1),
         tsneX: tsneResults[i] ? tsneResults[i][0] : 0,
         tsneY: tsneResults[i] ? tsneResults[i][1] : 0,
         umapX: umapResults[i] ? umapResults[i][0] : 0,
@@ -203,3 +195,23 @@ export const getMetricLabel = (key: string): string => {
     };
     return labels[key] || key;
 }
+
+export const reclusterData = (data: ClusteredData[], features: string[], k: number): ClusteredData[] => {
+    if (data.length < k) return data;
+
+    const dataset = data.map(d =>
+        features.map(f => Number(d[f]) || 0)
+    );
+
+    try {
+        const result = kmeans(dataset, k, { initialization: 'kmeans++' });
+
+        return data.map((d, i) => ({
+            ...d,
+            cluster: result.clusters[i]
+        }));
+    } catch (e) {
+        console.error("Reclustering failed", e);
+        return data;
+    }
+};

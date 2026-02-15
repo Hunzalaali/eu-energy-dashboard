@@ -21,27 +21,63 @@ const EUROPE_COUNTRIES = [
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
+const NAME_TO_ISO: { [key: string]: string } = {
+    "Austria": "AT",
+    "Belgium": "BE",
+    "Bulgaria": "BG",
+    "Cyprus": "CY",
+    "Czech Rep.": "CZ",
+    "Germany": "DE",
+    "Denmark": "DK",
+    "Estonia": "EE",
+    "Greece": "EL",
+    "Spain": "ES",
+    "Finland": "FI",
+    "France": "FR",
+    "Croatia": "HR",
+    "Hungary": "HU",
+    "Ireland": "IE",
+    "Italy": "IT",
+    "Lithuania": "LT",
+    "Luxembourg": "LU",
+    "Latvia": "LV",
+    "Malta": "MT",
+    "Netherlands": "NL",
+    "Poland": "PL",
+    "Portugal": "PT",
+    "Romania": "RO",
+    "Sweden": "SE",
+    "Slovenia": "SI",
+    "Slovakia": "SK",
+    "United Kingdom": "UK"
+};
+
 interface MapChartProps {
     data: ClusteredData[];
     metric: string;
     mode?: 'metric' | 'cluster';
 }
 
+const METRIC_COLORS = [
+    "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6",
+    "#4292c6", "#2171b5", "#08519c", "#08306b"
+];
+
 const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) => {
     // console.log(data, metric, mode);
-    const colorScale = useMemo(() => {
-        if (mode === 'cluster') return null;
+
+    const { colorScale, min, max } = useMemo(() => {
+        if (mode === 'cluster') return { colorScale: null, min: 0, max: 0 };
 
         const values = data.map((d) => Number(d[metric]) || 0);
-        const min = Math.min(...values);
-        const max = Math.max(...values);
+        const minVal = Math.min(...values);
+        const maxVal = Math.max(...values);
 
-        return scaleQuantize<string>()
-            .domain([min, max])
-            .range([
-                "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6",
-                "#4292c6", "#2171b5", "#08519c", "#08306b"
-            ]);
+        const scale = scaleQuantize<string>()
+            .domain([minVal, maxVal])
+            .range(METRIC_COLORS);
+
+        return { colorScale: scale, min: minVal, max: maxVal };
     }, [data, metric, mode]);
 
     const dataMap = useMemo(() => {
@@ -75,17 +111,29 @@ const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) =>
                         ))}
                     </Group>
                 )}
+                {mode === 'metric' && (
+                    <Group gap="xs">
+                        <Text size="xs">{min.toFixed(2)}</Text>
+                        <div style={{
+                            width: 100,
+                            height: 10,
+                            background: `linear-gradient(to right, ${METRIC_COLORS.join(', ')})`,
+                            borderRadius: 4
+                        }} />
+                        <Text size="xs">{max.toFixed(2)}</Text>
+                    </Group>
+                )}
             </Group>
 
-            <ComposableMap projection="geoMercator" projectionConfig={{ center: [10, 50], scale: 600 }}>
+            <ComposableMap projection="geoMercator" projectionConfig={{ center: [10, 30], scale: 250 }}>
                 {/* ZoomableGroup can be tricky with sizing, sometimes better without if fixed region */}
                 <Geographies geography={GEO_URL}>
                     {({ geographies }: { geographies: any[] }) =>
                         geographies
                             .filter((geo) => EUROPE_COUNTRIES.includes(geo.properties.name))
                             .map((geo) => {
-                                console.log(geo);
-                                const dataPoint = dataMap.get(geo.id) || dataMap.get(geo.properties.name); // Try ID then Name
+                                const iso = NAME_TO_ISO[geo.properties.name];
+                                const dataPoint = (iso ? dataMap.get(iso) : undefined) || dataMap.get(geo.properties.name) || dataMap.get(geo.id);
                                 const curValue = dataPoint?.value;
 
                                 let fill = "#EEE";
