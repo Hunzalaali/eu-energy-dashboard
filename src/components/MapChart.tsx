@@ -5,7 +5,6 @@ import { type ClusteredData, getMetricLabel } from "../services/analysis";
 import { Tooltip, Paper, Text, Group } from "@mantine/core";
 
 // GeoJSON/TopoJSON for Europe. Using a world map and zooming in is often easiest for stability.
-// GeoJSON/TopoJSON for Europe. Using a world map and zooming in is often easiest for stability.
 const GEO_URL = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
 
 const EUROPE_COUNTRIES = [
@@ -55,7 +54,10 @@ const NAME_TO_ISO: { [key: string]: string } = {
 interface MapChartProps {
     data: ClusteredData[];
     metric: string;
-    mode?: 'metric' | 'cluster';
+    mode?: 'metric' | 'cluster' | 'clusterTimeSeries';
+    onCountryClick?: (geo: any) => void;
+    selectedCluster?: number | null;
+    selectedCountry?: string | null;
 }
 
 const METRIC_COLORS = [
@@ -63,11 +65,11 @@ const METRIC_COLORS = [
     "#4292c6", "#2171b5", "#08519c", "#08306b"
 ];
 
-const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) => {
+const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric', onCountryClick, selectedCluster, selectedCountry }) => {
     // console.log(data, metric, mode);
 
     const { colorScale, min, max } = useMemo(() => {
-        if (mode === 'cluster') return { colorScale: null, min: 0, max: 0 };
+        if (mode.startsWith('cluster')) return { colorScale: null, min: 0, max: 0 };
 
         const values = data.map((d) => Number(d[metric]) || 0);
         const minVal = Math.min(...values);
@@ -83,7 +85,11 @@ const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) =>
     const dataMap = useMemo(() => {
         const map = new Map();
         data.forEach((d) => {
-            if (mode === 'cluster') {
+            if (mode === 'clusterTimeSeries') {
+                const val = d.clusterTimeSeries ?? -1;
+                map.set(d.iso_alpha, { value: val, label: val >= 0 ? `Profile ${val}` : 'N/A' });
+                map.set(d.country, { value: val, label: val >= 0 ? `Profile ${val}` : 'N/A' });
+            } else if (mode === 'cluster') {
                 map.set(d.iso_alpha, { value: d.cluster, label: `Cluster ${d.cluster}` });
                 map.set(d.country, { value: d.cluster, label: `Cluster ${d.cluster}` });
             } else {
@@ -96,19 +102,24 @@ const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) =>
 
     // Center on Europe approx
     return (
-        <Paper shadow="xs" p="md" withBorder style={{ height: "500px", overflow: "hidden" }}>
+        <Paper shadow="xs" p="md" withBorder style={{ height: "600px", overflow: "hidden" }}>
             <Group justify="space-between" mb="sm">
                 <Text size="lg" fw={700}>
-                    {mode === 'cluster' ? 'Cluster Membership' : getMetricLabel(metric)}
+                    {mode === 'clusterTimeSeries' ? 'Transition Profiles' :
+                        mode === 'cluster' ? 'Yearly Cluster' :
+                            getMetricLabel(metric)}
                 </Text>
-                {mode === 'cluster' && (
+                {mode.startsWith('cluster') && (
                     <Group gap="xs">
-                        {Array.from(new Set(data.map(d => d.cluster))).sort().map(cluster => (
-                            <Group key={cluster} gap={4}>
-                                <div style={{ width: 10, height: 10, backgroundColor: COLORS[cluster % COLORS.length], borderRadius: '50%' }} />
-                                <Text size="xs">C{cluster}</Text>
-                            </Group>
-                        ))}
+                        {Array.from(new Set(data.map(d => mode === 'clusterTimeSeries' ? d.clusterTimeSeries : d.cluster)))
+                            .filter(c => c !== undefined && c !== -1)
+                            .sort((a, b) => (a as number) - (b as number))
+                            .map(cluster => (
+                                <Group key={cluster} gap={4} style={{ opacity: selectedCluster === null || selectedCluster === cluster ? 1 : 0.3 }}>
+                                    <div style={{ width: 10, height: 10, backgroundColor: COLORS[(cluster as number) % COLORS.length], borderRadius: '50%' }} />
+                                    <Text size="xs">C{cluster}</Text>
+                                </Group>
+                            ))}
                     </Group>
                 )}
                 {mode === 'metric' && (
@@ -125,8 +136,7 @@ const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) =>
                 )}
             </Group>
 
-            <ComposableMap projection="geoMercator" projectionConfig={{ center: [10, 30], scale: 250 }}>
-                {/* ZoomableGroup can be tricky with sizing, sometimes better without if fixed region */}
+            <ComposableMap projection="geoMercator" projectionConfig={{ center: [10, 50], scale: 600 }} height={500}>
                 <Geographies geography={GEO_URL}>
                     {({ geographies }: { geographies: any[] }) =>
                         geographies
@@ -137,13 +147,34 @@ const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) =>
                                 const curValue = dataPoint?.value;
 
                                 let fill = "#EEE";
-                                if (curValue !== undefined) {
-                                    if (mode === 'cluster') {
+                                if (curValue !== undefined && curValue !== -1) {
+                                    if (mode.startsWith('cluster')) {
                                         fill = COLORS[curValue % COLORS.length];
                                     } else {
-                                        fill = colorScale ? colorScale(curValue) : "#EEE";
+                                        fill = (colorScale ? colorScale(curValue) : "#EEE") || "#EEE";
                                     }
                                 }
+
+                                // Apply dimming if a cluster is selected
+                                const isDimmed = selectedCluster !== null && selectedCluster !== undefined && mode.startsWith('cluster') && curValue !== selectedCluster;
+                                const isSelected = selectedCountry === geo.properties.name;
+
+                                const style = {
+                                    default: {
+                                        outline: "none",
+                                        fill: isDimmed ? "#ddd" : fill,
+                                        stroke: isSelected ? "#FF0000" : "#FFF",
+                                        strokeWidth: isSelected ? 2 : 0.5,
+                                        transition: 'all 0.3s'
+                                    },
+                                    hover: {
+                                        outline: "none",
+                                        fill: isDimmed ? "#ccc" : "#F53",
+                                        stroke: isSelected ? "#FF0000" : "#FFF",
+                                        strokeWidth: isSelected ? 2 : 0.5
+                                    },
+                                    pressed: { outline: "none", fill: "#E42" },
+                                };
 
                                 return (
                                     <Tooltip
@@ -153,13 +184,8 @@ const MapChart: React.FC<MapChartProps> = ({ data, metric, mode = 'metric' }) =>
                                     >
                                         <Geography
                                             geography={geo}
-                                            fill={fill}
-                                            stroke="#D6D6DA"
-                                            style={{
-                                                default: { outline: "none" },
-                                                hover: { fill: "#F53", outline: "none" },
-                                                pressed: { outline: "none" },
-                                            }}
+                                            style={style}
+                                            onClick={() => onCountryClick && onCountryClick(geo)}
                                         />
                                     </Tooltip>
                                 );

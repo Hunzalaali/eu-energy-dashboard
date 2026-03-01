@@ -1,35 +1,48 @@
+import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Paper, Title } from '@mantine/core';
-import { type EnergyData } from '../services/analysis';
+import { Paper, Title, Text } from '@mantine/core';
+import { type EnergyData, getMetricLabel } from '../services/analysis';
 
 interface EnergyTrendsChartProps {
     data: EnergyData[];
-    title: string;
+    selectedCountry: string | null;
+    metric: string;
 }
 
-export const EnergyTrendsChart = ({ data, title }: EnergyTrendsChartProps) => {
-    // Aggregate data by year if multiple countries
-    // Note: If we are viewing a single country, this works directly.
-    // If viewing 'All', we should probably average the values for the year.
+export const EnergyTrendsChart = ({ data, selectedCountry, metric }: EnergyTrendsChartProps) => {
 
-    const years = Array.from(new Set(data.map(d => d.year))).sort();
+    const chartData = useMemo(() => {
+        const years = Array.from(new Set(data.map(d => d.year))).sort((a, b) => a - b);
+        return years.map(year => {
+            const yearData = data.filter(d => d.year === year);
 
-    const chartData = years.map(year => {
-        const yearData = data.filter(d => d.year === year);
-        const avgRenewable = yearData.reduce((acc, curr) => acc + curr.renewable_share, 0) / yearData.length;
-        const avgFossil = yearData.reduce((acc, curr) => acc + curr.fossil_share, 0) / yearData.length;
+            // Calculate EU Average (or dataset average)
+            const avg = yearData.reduce((acc, curr) => acc + (Number(curr[metric]) || 0), 0) / yearData.length;
 
-        return {
-            year,
-            renewable: Number(avgRenewable.toFixed(2)),
-            fossil: Number(avgFossil.toFixed(2)),
-        };
-    });
+            const entry: any = {
+                year,
+                'EU Average': Number(avg.toFixed(2))
+            };
+
+            if (selectedCountry) {
+                const countryEntry = yearData.find(d => d.country === selectedCountry);
+                if (countryEntry) {
+                    entry[selectedCountry] = Number(countryEntry[metric]);
+                }
+            }
+
+            return entry;
+        });
+    }, [data, selectedCountry, metric]);
 
     return (
-        <Paper withBorder p="md" radius="md" h={400}>
-            <Title order={3} mb="md">{title}</Title>
-            <ResponsiveContainer width="100%" height="90%">
+        <Paper shadow="xs" p="md" withBorder h="100%">
+            <Title order={4} mb="xs">Temporal Evolution: {getMetricLabel(metric)}</Title>
+            <Text size="xs" c="dimmed" mb="md">
+                Comparing {selectedCountry ? selectedCountry : 'Selection'} vs EU Average over time.
+            </Text>
+
+            <ResponsiveContainer width="100%" height={300}>
                 <LineChart
                     data={chartData}
                     margin={{
@@ -44,8 +57,23 @@ export const EnergyTrendsChart = ({ data, title }: EnergyTrendsChartProps) => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="renewable" name="Renewable Share %" stroke="#12b886" activeDot={{ r: 8 }} />
-                    <Line type="monotone" dataKey="fossil" name="Fossil Share %" stroke="#fd7e14" />
+                    <Line
+                        type="monotone"
+                        dataKey="EU Average"
+                        stroke="#adb5bd"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                    />
+                    {selectedCountry && (
+                        <Line
+                            type="monotone"
+                            dataKey={selectedCountry}
+                            stroke="#228be6"
+                            strokeWidth={3}
+                            activeDot={{ r: 8 }}
+                        />
+                    )}
                 </LineChart>
             </ResponsiveContainer>
         </Paper>

@@ -5,11 +5,12 @@ import { type ClusteredData, getClusterCentroids, normalizeForRadar, FEATURES, g
 
 interface ClusterRadarChartProps {
     data: ClusteredData[];
+    clusterNames?: Record<number, string>;
 }
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
-const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data }) => {
+const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterNames }) => {
     const chartData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
@@ -17,7 +18,6 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data }) => {
         const normalized = normalizeForRadar(data, centroids);
 
         // Transform for Recharts Radar
-        // We want: [{ subject: 'Feature Name', Cluster0: val, Cluster1: val, ... }]
         return FEATURES.map(feature => {
             const entry: Record<string, number | string> = { subject: getMetricLabel(feature) };
             normalized.forEach(c => {
@@ -36,7 +36,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data }) => {
 
     return (
         <Paper shadow="xs" p="md" withBorder h="100%">
-            <Title order={4} mb="md">Cluster Profiles (Normalized)</Title>
+            <Title order={4} mb="md">Cluster Profiles (Fingerprints)</Title>
             <ResponsiveContainer width="100%" height={300}>
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                     <PolarGrid />
@@ -46,7 +46,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data }) => {
                     {clusters.map((clusterId) => (
                         <Radar
                             key={clusterId}
-                            name={`Cluster ${clusterId}`}
+                            name={clusterNames ? `${clusterNames[clusterId]} (C${clusterId})` : `Cluster ${clusterId}`}
                             dataKey={`Cluster ${clusterId}`}
                             stroke={COLORS[clusterId % COLORS.length]}
                             fill={COLORS[clusterId % COLORS.length]}
