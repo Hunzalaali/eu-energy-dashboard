@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useMemo, useCallback } from 'react';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Paper, Title, Text, Group } from '@mantine/core';
 import { type ClusteredData } from '../services/analysis';
+import { useInteraction } from '../context/InteractionContext';
 
 interface ClusterScatterPlotProps {
     data: ClusteredData[];
@@ -11,6 +12,7 @@ interface ClusterScatterPlotProps {
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
 export const ClusterScatterPlot = ({ data, method = 'umap' }: ClusterScatterPlotProps) => {
+    const { hoveredCountry, selectedCountry, selectedCluster, setHoveredCountry, toggleCountry } = useInteraction();
 
     const chartData = useMemo(() => {
         return data.map(d => ({
@@ -20,29 +22,34 @@ export const ClusterScatterPlot = ({ data, method = 'umap' }: ClusterScatterPlot
         }));
     }, [data, method]);
 
+    const clusters = useMemo(() =>
+        Array.from(new Set(data.map(d => d.cluster))).sort(),
+        [data]
+    );
+
     return (
-        <Paper shadow="xs" p="md" withBorder h="100%" style={{ minHeight: 400 }}>
+        <Paper shadow="xs" p="md" withBorder h="100%">
             <Group justify="space-between" mb="md">
-                <Title order={4}>Cluster Separation ({method.toUpperCase()})</Title>
+                <Title order={4}>Cluster Projection ({method.toUpperCase()})</Title>
                 <Text size="xs" c="dimmed">
-                    2D projection of {data.length} countries based on energy profile.
+                    {hoveredCountry || selectedCountry ? `🔗 ${hoveredCountry || selectedCountry}` : `${data.length} countries`}
                 </Text>
             </Group>
 
-            <ResponsiveContainer width="100%" height={350}>
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <CartesianGrid />
+            <ResponsiveContainer width="100%" height={300}>
+                <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis type="number" dataKey="x" name="X" hide />
                     <YAxis type="number" dataKey="y" name="Y" hide />
                     <Tooltip
                         cursor={{ strokeDasharray: '3 3' }}
                         content={({ active, payload }) => {
                             if (active && payload && payload.length) {
-                                const data = payload[0].payload;
+                                const d = payload[0].payload;
                                 return (
-                                    <Paper p="xs" shadow="xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
-                                        <Text fw={700} size="sm">{data.country}</Text>
-                                        <Text size="xs">Cluster: {data.cluster}</Text>
+                                    <Paper p="xs" shadow="xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+                                        <Text fw={700} size="sm">{d.country}</Text>
+                                        <Text size="xs">Cluster {d.cluster}</Text>
                                     </Paper>
                                 );
                             }
@@ -50,16 +57,42 @@ export const ClusterScatterPlot = ({ data, method = 'umap' }: ClusterScatterPlot
                         }}
                     />
                     <Legend />
-                    {Array.from(new Set(data.map(d => d.cluster))).sort().map((clusterId) => (
-                        <Scatter
-                            key={clusterId}
-                            name={`Cluster ${clusterId}`}
-                            data={chartData.filter(d => d.cluster === clusterId)}
-                            fill={COLORS[clusterId % COLORS.length]}
-                        >
-                            {/* We can map cells if we want individual control, but Scatter group is better for legend */}
-                        </Scatter>
-                    ))}
+                    {clusters.map((clusterId) => {
+                        const clusterData = chartData.filter(d => d.cluster === clusterId);
+                        const isClusterDimmed = selectedCluster !== null && selectedCluster !== clusterId;
+
+                        return (
+                            <Scatter
+                                key={clusterId}
+                                name={`C${clusterId}`}
+                                data={clusterData}
+                                fill={COLORS[clusterId % COLORS.length]}
+                                fillOpacity={isClusterDimmed ? 0.1 : 1}
+                                onMouseEnter={(e: any) => {
+                                    if (e?.payload?.country) setHoveredCountry(e.payload.country);
+                                }}
+                                onMouseLeave={() => setHoveredCountry(null)}
+                                onClick={(e: any) => {
+                                    if (e?.payload?.country) toggleCountry(e.payload.country);
+                                }}
+                                cursor="pointer"
+                            >
+                                {clusterData.map((entry, idx) => {
+                                    const isHighlighted = entry.country === hoveredCountry || entry.country === selectedCountry;
+                                    return (
+                                        <Cell
+                                            key={idx}
+                                            r={isHighlighted ? 9 : 5}
+                                            fill={COLORS[clusterId % COLORS.length]}
+                                            stroke={isHighlighted ? '#e03131' : '#fff'}
+                                            strokeWidth={isHighlighted ? 3 : 1}
+                                            style={{ transition: 'all 0.2s' }}
+                                        />
+                                    );
+                                })}
+                            </Scatter>
+                        );
+                    })}
                 </ScatterChart>
             </ResponsiveContainer>
         </Paper>

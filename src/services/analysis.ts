@@ -291,6 +291,152 @@ const euclideanDistance = (a: number[], b: number[]) => {
     return Math.sqrt(a.reduce((acc, val, i) => acc + Math.pow(val - b[i], 2), 0));
 }
 
+/**
+ * Davies-Bouldin Index (DBI)
+ * 
+ * Measures the average "similarity" between each cluster and its most similar cluster.
+ * Lower values indicate better clustering (well-separated, compact clusters).
+ * 
+ * Reference: Davies, D.L. & Bouldin, D.W. (1979). "A Cluster Separation Measure."
+ * IEEE Transactions on Pattern Analysis and Machine Intelligence, PAMI-1(2), 224-227.
+ */
+const calculateDBI = (data: number[][], clusters: number[], k: number): number => {
+    // Compute centroids
+    const centroids: number[][] = [];
+    const clusterSizes: number[] = new Array(k).fill(0);
+    const dim = data[0].length;
+
+    for (let c = 0; c < k; c++) {
+        centroids.push(new Array(dim).fill(0));
+    }
+    data.forEach((point, i) => {
+        const c = clusters[i];
+        if (c >= 0 && c < k) {
+            clusterSizes[c]++;
+            for (let d = 0; d < dim; d++) centroids[c][d] += point[d];
+        }
+    });
+    for (let c = 0; c < k; c++) {
+        if (clusterSizes[c] > 0) {
+            for (let d = 0; d < dim; d++) centroids[c][d] /= clusterSizes[c];
+        }
+    }
+
+    // Compute scatter (average distance to centroid) for each cluster
+    const scatter: number[] = new Array(k).fill(0);
+    data.forEach((point, i) => {
+        const c = clusters[i];
+        if (c >= 0 && c < k) {
+            scatter[c] += euclideanDistance(point, centroids[c]);
+        }
+    });
+    for (let c = 0; c < k; c++) {
+        scatter[c] = clusterSizes[c] > 0 ? scatter[c] / clusterSizes[c] : 0;
+    }
+
+    // Compute DBI
+    let dbi = 0;
+    for (let i = 0; i < k; i++) {
+        let maxRatio = 0;
+        for (let j = 0; j < k; j++) {
+            if (i === j) continue;
+            const ratio = (scatter[i] + scatter[j]) / (euclideanDistance(centroids[i], centroids[j]) || 1e-10);
+            if (ratio > maxRatio) maxRatio = ratio;
+        }
+        dbi += maxRatio;
+    }
+    return dbi / k;
+};
+
+/**
+ * Calinski-Harabasz Index (CH Index / Variance Ratio Criterion)
+ * 
+ * Ratio of between-cluster dispersion to within-cluster dispersion.
+ * Higher values indicate better-defined clusters.
+ * 
+ * Reference: Calinski, T. & Harabasz, J. (1974). "A dendrite method for cluster analysis."
+ * Communications in Statistics, 3(1), 1-27.
+ */
+const calculateCH = (data: number[][], clusters: number[], k: number): number => {
+    const n = data.length;
+    const dim = data[0].length;
+    if (k <= 1 || n <= k) return 0;
+
+    // Global centroid
+    const globalCentroid = new Array(dim).fill(0);
+    data.forEach(point => {
+        for (let d = 0; d < dim; d++) globalCentroid[d] += point[d];
+    });
+    for (let d = 0; d < dim; d++) globalCentroid[d] /= n;
+
+    // Cluster centroids
+    const centroids: number[][] = [];
+    const sizes: number[] = new Array(k).fill(0);
+    for (let c = 0; c < k; c++) centroids.push(new Array(dim).fill(0));
+    data.forEach((point, i) => {
+        const c = clusters[i];
+        if (c >= 0 && c < k) {
+            sizes[c]++;
+            for (let d = 0; d < dim; d++) centroids[c][d] += point[d];
+        }
+    });
+    for (let c = 0; c < k; c++) {
+        if (sizes[c] > 0) {
+            for (let d = 0; d < dim; d++) centroids[c][d] /= sizes[c];
+        }
+    }
+
+    // Between-cluster dispersion (BG)
+    let bg = 0;
+    for (let c = 0; c < k; c++) {
+        bg += sizes[c] * Math.pow(euclideanDistance(centroids[c], globalCentroid), 2);
+    }
+
+    // Within-cluster dispersion (WG)
+    let wg = 0;
+    data.forEach((point, i) => {
+        const c = clusters[i];
+        if (c >= 0 && c < k) {
+            wg += Math.pow(euclideanDistance(point, centroids[c]), 2);
+        }
+    });
+
+    return (bg / (k - 1)) / (wg / (n - k));
+};
+
+/**
+ * Silhouette score computation (reusable).
+ */
+const calculateSilhouette = (data: number[][], clusters: number[], k: number): number => {
+    if (k <= 1) return 0;
+
+    const silhouettes = data.map((point, i) => {
+        const ownCluster = clusters[i];
+
+        // a(i): Mean distance to other points in same cluster
+        const sameClusterPoints = data.filter((_, idx) => clusters[idx] === ownCluster);
+        const a = sameClusterPoints.length > 1
+            ? sameClusterPoints.reduce((acc, p) => acc + euclideanDistance(point, p), 0) / (sameClusterPoints.length - 1)
+            : 0;
+
+        // b(i): Mean distance to points in nearest neighboring cluster
+        let minMeanDist = Infinity;
+        for (let c = 0; c < k; c++) {
+            if (c === ownCluster) continue;
+            const otherClusterPoints = data.filter((_, idx) => clusters[idx] === c);
+            if (otherClusterPoints.length > 0) {
+                const dist = otherClusterPoints.reduce((acc, p) => acc + euclideanDistance(point, p), 0) / otherClusterPoints.length;
+                if (dist < minMeanDist) minMeanDist = dist;
+            }
+        }
+        const b = minMeanDist === Infinity ? 0 : minMeanDist;
+
+        return Math.max(a, b) === 0 ? 0 : (b - a) / Math.max(a, b);
+    });
+
+    return silhouettes.reduce((acc, val) => acc + val, 0) / silhouettes.length;
+};
+
 export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange: number[] = [2, 3, 4, 5, 6, 7, 8]) => {
     const yearData = data.filter((d) => d.year === year);
     if (yearData.length < Math.max(...kRange)) return [];
@@ -315,44 +461,203 @@ export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange
     return kRange.map(k => {
         const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
 
-        // Calculate Inertia (WCSS)
+        // Inertia (WCSS)
         let inertia = 0;
         result.clusters.forEach((clusterIdx, i) => {
             const centroid = result.centroids[clusterIdx];
             inertia += Math.pow(euclideanDistance(scaledData[i], centroid), 2);
         });
 
-        // Calculate Silhouette Score (Simplified)
-        let totalSilhouette = 0;
-        if (k > 1) {
-            const silhouettes = scaledData.map((point, i) => {
-                const ownCluster = result.clusters[i];
+        // Silhouette
+        const silhouette = calculateSilhouette(scaledData, result.clusters, k);
 
-                // a(i): Mean distance to other points in same cluster
-                const sameClusterPoints = scaledData.filter((_, idx) => result.clusters[idx] === ownCluster);
-                const a = sameClusterPoints.length > 1
-                    ? sameClusterPoints.reduce((acc, p) => acc + euclideanDistance(point, p), 0) / (sameClusterPoints.length - 1)
-                    : 0;
+        // Davies-Bouldin Index
+        const dbi = k > 1 ? calculateDBI(scaledData, result.clusters, k) : 0;
 
-                // b(i): Mean distance to points in nearest neighboring cluster
-                let minMeanDist = Infinity;
-                for (let c = 0; c < k; c++) {
-                    if (c === ownCluster) continue;
-                    const otherClusterPoints = scaledData.filter((_, idx) => result.clusters[idx] === c);
-                    if (otherClusterPoints.length > 0) {
-                        const dist = otherClusterPoints.reduce((acc, p) => acc + euclideanDistance(point, p), 0) / otherClusterPoints.length;
-                        if (dist < minMeanDist) minMeanDist = dist;
-                    }
-                }
-                const b = minMeanDist;
+        // Calinski-Harabasz Index
+        const ch = calculateCH(scaledData, result.clusters, k);
 
-                return (b - a) / Math.max(a, b);
-            });
-            totalSilhouette = silhouettes.reduce((acc, val) => acc + val, 0) / silhouettes.length;
+        return { k, inertia, silhouette, dbi, ch };
+    });
+};
+
+/**
+ * Comparative Algorithm Analysis
+ * 
+ * Runs K-Means, Hierarchical (Ward's), and DBSCAN on the same data,
+ * then computes validation metrics for each. This is the core of the
+ * methodology comparison needed for the thesis.
+ */
+import { hierarchicalClustering } from './hierarchicalClustering';
+import { dbscan } from './dbscan';
+
+export interface AlgorithmComparison {
+    algorithm: string;
+    k: number;
+    silhouette: number;
+    dbi: number;
+    ch: number;
+    noisePoints?: number;
+    assignments: number[];
+    labels: string[];
+}
+
+export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 4): AlgorithmComparison[] => {
+    const yearData = data.filter((d) => d.year === year);
+    if (yearData.length < k) return [];
+
+    const labels = yearData.map(d => d.country);
+
+    // Extract and standardize features
+    const dataset = yearData.map((d) =>
+        FEATURES.map((f) => (typeof d[f] === 'number' ? d[f] : 0))
+    ) as number[][];
+
+    const means = FEATURES.map((_, i) =>
+        dataset.reduce((acc, row) => acc + row[i], 0) / dataset.length
+    );
+    const stds = FEATURES.map((_, i) => {
+        const mean = means[i];
+        const variance = dataset.reduce((acc, row) => acc + Math.pow(row[i] - mean, 2), 0) / dataset.length;
+        return Math.sqrt(variance) || 1;
+    });
+    const scaledData = dataset.map(row =>
+        row.map((val, i) => (val - means[i]) / stds[i])
+    );
+
+    const results: AlgorithmComparison[] = [];
+
+    // 1. K-Means (with consensus — run 20 times, pick best by inertia)
+    let bestKMeans = { clusters: [] as number[], inertia: Infinity, centroids: [] as number[][] };
+    for (let run = 0; run < 20; run++) {
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        let inertia = 0;
+        result.clusters.forEach((ci, i) => {
+            inertia += Math.pow(euclideanDistance(scaledData[i], result.centroids[ci]), 2);
+        });
+        if (inertia < bestKMeans.inertia) {
+            bestKMeans = { clusters: result.clusters, inertia, centroids: result.centroids };
+        }
+    }
+
+    results.push({
+        algorithm: 'K-Means (consensus, n=20)',
+        k,
+        silhouette: calculateSilhouette(scaledData, bestKMeans.clusters, k),
+        dbi: calculateDBI(scaledData, bestKMeans.clusters, k),
+        ch: calculateCH(scaledData, bestKMeans.clusters, k),
+        assignments: bestKMeans.clusters,
+        labels,
+    });
+
+    // 2. Hierarchical Clustering (Ward's method)
+    const hierResult = hierarchicalClustering(scaledData, labels, k);
+    const hierK = Math.max(...hierResult.assignments) + 1;
+
+    results.push({
+        algorithm: "Hierarchical (Ward's)",
+        k: hierK,
+        silhouette: calculateSilhouette(scaledData, hierResult.assignments, hierK),
+        dbi: calculateDBI(scaledData, hierResult.assignments, hierK),
+        ch: calculateCH(scaledData, hierResult.assignments, hierK),
+        assignments: hierResult.assignments,
+        labels,
+    });
+
+    // 3. DBSCAN
+    const dbResult = dbscan(scaledData);
+    const dbK = dbResult.numClusters;
+    // For DBSCAN metrics, exclude noise points
+    const dbAssignmentsClean = dbResult.assignments.map(a => a === -1 ? dbK : a); // Treat noise as its own "cluster" for metrics
+    const effectiveK = dbK > 0 ? dbK + (dbResult.noisePoints.length > 0 ? 1 : 0) : 1;
+
+    results.push({
+        algorithm: 'DBSCAN (auto-ε)',
+        k: dbK,
+        silhouette: effectiveK > 1 ? calculateSilhouette(scaledData, dbAssignmentsClean, effectiveK) : 0,
+        dbi: effectiveK > 1 ? calculateDBI(scaledData, dbAssignmentsClean, effectiveK) : 0,
+        ch: effectiveK > 1 ? calculateCH(scaledData, dbAssignmentsClean, effectiveK) : 0,
+        noisePoints: dbResult.noisePoints.length,
+        assignments: dbResult.assignments,
+        labels,
+    });
+
+    return results;
+};
+
+/**
+ * Z-score based cluster naming.
+ * 
+ * Instead of hardcoded thresholds, this computes the z-score of each
+ * feature's centroid relative to the overall mean. Features with |z| > 1.0
+ * are considered "distinctive" for that cluster.
+ * 
+ * This is more principled and generalizable than the previous approach.
+ */
+export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, string> => {
+    const clusters = Array.from(new Set(data.map(d => d.cluster))).sort();
+    const names: Record<number, string> = {};
+
+    // Compute global means and stds for each feature
+    const globalMeans: Record<string, number> = {};
+    const globalStds: Record<string, number> = {};
+
+    FEATURES.forEach(f => {
+        const values = data.map(d => Number(d[f]) || 0);
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        const variance = values.reduce((a, v) => a + Math.pow(v - mean, 2), 0) / values.length;
+        globalMeans[f] = mean;
+        globalStds[f] = Math.sqrt(variance) || 1;
+    });
+
+    // Descriptive name fragments
+    const featureDescriptors: Record<string, { high: string; low: string }> = {
+        'renewable_share': { high: 'Green', low: 'Low-Renewable' },
+        'energy_dependency': { high: 'Import-Dependent', low: 'Self-Sufficient' },
+        'ghg_intensity': { high: 'Carbon-Intensive', low: 'Low-Carbon' },
+        'energy_intensity': { high: 'Energy-Intensive', low: 'Efficient' },
+        'per_capita_toe': { high: 'High-Consumption', low: 'Low-Consumption' },
+        'fossil_share': { high: 'Fossil-Reliant', low: 'Post-Fossil' },
+        'nuclear_share': { high: 'Nuclear-Powered', low: '' },
+    };
+
+    clusters.forEach(clusterId => {
+        const clusterPoints = data.filter(d => d.cluster === clusterId);
+        if (clusterPoints.length === 0) {
+            names[clusterId] = 'Empty';
+            return;
         }
 
-        return { k, inertia, silhouette: totalSilhouette };
+        // Compute z-scores for this cluster's centroid
+        const zScores: { feature: string; z: number }[] = FEATURES.map(f => {
+            const clusterMean = clusterPoints.reduce((a, d) => a + (Number(d[f]) || 0), 0) / clusterPoints.length;
+            return { feature: f, z: (clusterMean - globalMeans[f]) / globalStds[f] };
+        });
+
+        // Sort by absolute z-score, pick top distinctive features
+        const sorted = zScores
+            .filter(z => Math.abs(z.z) > 0.5)
+            .sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+
+        if (sorted.length === 0) {
+            names[clusterId] = 'Mixed Profile';
+            return;
+        }
+
+        // Build name from top 1-2 distinctive features
+        const parts: string[] = [];
+        for (let i = 0; i < Math.min(2, sorted.length); i++) {
+            const { feature, z } = sorted[i];
+            const desc = featureDescriptors[feature];
+            if (desc) {
+                parts.push(z > 0 ? desc.high : desc.low);
+            }
+        }
+
+        names[clusterId] = parts.filter(p => p.length > 0).join(' & ') || 'Mixed Profile';
     });
+
+    return names;
 };
 
 // --- Cluster Naming & Characterization ---

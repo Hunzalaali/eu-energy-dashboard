@@ -1,44 +1,67 @@
 import { useState, useMemo } from 'react';
-import { AppShell, Container, Title, LoadingOverlay, Paper, Box, Grid, SegmentedControl, Text } from '@mantine/core';
-import { performAnalysis, performTimeSeriesAnalysis, assignClusterNames, getClusterCentroids, normalizeForRadar, type ClusteredData } from '../services/analysis';
+import { LoadingOverlay, Slider, Select, SegmentedControl } from '@mantine/core';
+import {
+    IconLayoutDashboard, IconMap, IconChartScatter,
+    IconTimeline, IconFlask, IconHierarchy, IconGridDots,
+} from '@tabler/icons-react';
+import { performAnalysis, performTimeSeriesAnalysis, assignClusterNames, getClusterCentroids, normalizeForRadar, getMetricLabel, type ClusteredData } from '../services/analysis';
 import type { EnergyData } from '../data/useEnergyData';
 import { useEnergyData } from '../data/useEnergyData';
+import { useSectoralData } from '../data/useSectoralData';
+import { InteractionProvider, useInteraction } from '../context/InteractionContext';
+
 import MapChart from './MapChart';
 import ClusterRadarChart from './ClusterRadarChart';
-import { SidebarControls } from './SidebarControls';
 import { ClusterScatterPlot } from './ClusterScatterPlot';
 import { ClusterCompositionList } from './ClusterCompositionList';
-import { KPICards } from './KPICards';
+import { ClusterBoxPlot } from './ClusterBoxPlot';
+import { SectoralEmissionsChart } from './SectoralEmissionsChart';
+import { GoalTrackingChart } from './GoalTrackingChart';
+import { EnergyMixChart } from './EnergyMixChart';
 import { EnergyTrendsChart } from './EnergyTrendsChart';
 import { TransitionFlowChart } from './TransitionFlowChart';
-import { MethodologyView } from './MethodologyView';
-import { ClusterBoxPlot } from './ClusterBoxPlot';
 import { TypologyRadarChart } from './TypologyRadarChart';
 import { TypologyTimeSeriesChart } from './TypologyTimeSeriesChart';
+import { MethodologyView } from './MethodologyView';
+import { HeatmapChart } from './HeatmapChart';
+import { CountryDetailPanel } from './CountryDetailPanel';
+import { DendrogramChart } from './DendrogramChart';
+import { PCABiplot } from './PCABiplot';
 
 const METRICS: string[] = [
     'renewable_share', 'energy_dependency', 'ghg_intensity',
     'energy_intensity', 'fossil_share', 'nuclear_share'
 ];
 
-export const Dashboard = () => {
+const VIEWS = [
+    { id: 'overview', label: 'Overview', icon: IconLayoutDashboard },
+    { id: 'map', label: 'Map Explorer', icon: IconMap },
+    { id: 'cluster', label: 'Cluster Analysis', icon: IconChartScatter },
+    { id: 'heatmap', label: 'Heatmap', icon: IconGridDots },
+    { id: 'typologies', label: 'Typologies', icon: IconHierarchy },
+    { id: 'timeSeries', label: 'Time Series', icon: IconTimeline },
+    { id: 'methodology', label: 'Methodology', icon: IconFlask },
+];
+
+// Inner component that reads the interaction context
+const DashboardInner = () => {
     const { data, loading } = useEnergyData();
     const [year, setYear] = useState<number>(2023);
     const [metric, setMetric] = useState<string>('renewable_share');
-    const [mapMode, setMapMode] = useState<string>('metric');
+    const [mapMode, setMapMode] = useState<string>('cluster');
+    const [view, setView] = useState<string>('overview');
 
-    const [view, setView] = useState<string>('map');
-    const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+    const { selectedCountry, setSelectedCountry } = useInteraction();
 
     const timeSeriesClusters = useMemo(() => {
         if (!data || data.length === 0) return new Map();
-        return performTimeSeriesAnalysis(data as any, 4); // Need to typecast strictly later if needed
+        return performTimeSeriesAnalysis(data as any, 4);
     }, [data]);
 
     const fullClusteredData = useMemo(() => {
         return (data || []).map(d => ({
             ...d,
-            cluster: d.cluster || 0, // Fallback if no cluster
+            cluster: d.cluster || 0,
             clusterTimeSeries: timeSeriesClusters.get(d.country)
         })) as ClusteredData[];
     }, [data, timeSeriesClusters]);
@@ -54,152 +77,355 @@ export const Dashboard = () => {
     const clusterNames = useMemo(() => {
         if (analyzedData.length === 0) return {};
         const centroids = getClusterCentroids(analyzedData);
-        // Normalize for fair naming based on relative strength
         const normalized = normalizeForRadar(analyzedData, centroids);
         return assignClusterNames(normalized);
     }, [analyzedData]);
+
+    const { data: sectoralData } = useSectoralData(selectedCountry);
 
     const maxYear = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
     const minYear = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
     const countries = useMemo(() => Array.from(new Set((data || []).map(d => d.country))).sort(), [data]);
 
-    const handleCountryClick = (geo: any) => {
-        const countryName = geo.properties.name;
-        setSelectedCountry(countryName);
-    };
-
     return (
-        <AppShell
-            navbar={{ width: 300, breakpoint: 'sm' }}
-            padding="md"
-        >
-            {/* ... Navbar ... */}
-            <AppShell.Navbar p="md">
-                <Title order={4} mb="md">EU Energy Dashboard</Title>
-                <SidebarControls
-                    year={year}
-                    setYear={setYear}
-                    minYear={minYear}
-                    maxYear={maxYear}
-                    metrics={METRICS}
-                    metric={metric}
-                    setMetric={setMetric}
-                    selectedCountry={selectedCountry}
-                    setSelectedCountry={setSelectedCountry}
-                    countries={countries}
-                    currentView={view}
-                    setView={setView}
-                />
-            </AppShell.Navbar>
+        <div className="dashboard-layout">
+            {/* Sidebar */}
+            <aside className="dashboard-sidebar">
+                <div className="logo">🇪🇺 EU Energy Dashboard</div>
+                <div className="logo-sub">Thesis Visual Analytics Platform</div>
 
-            <AppShell.Main>
-                <Container fluid h="100%">
-                    <LoadingOverlay visible={loading} overlayProps={{ radius: "sm", blur: 2 }} />
+                <div className="nav-section">Views</div>
+                {VIEWS.map(v => (
+                    <div
+                        key={v.id}
+                        className={`nav-item ${view === v.id ? 'active' : ''}`}
+                        onClick={() => setView(v.id)}
+                    >
+                        <v.icon size={16} stroke={1.8} />
+                        {v.label}
+                    </div>
+                ))}
 
-                    {view === 'map' && (
-                        <Box>
-                            <Box mb="md">
-                                <KPICards data={analyzedData} />
-                            </Box>
-                            <Box mb="md" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Title order={3}>Spatial EDA: Map View</Title>
-                                <SegmentedControl
-                                    value={mapMode}
-                                    onChange={setMapMode}
-                                    data={[
-                                        { label: 'Metric Value', value: 'metric' },
-                                        { label: 'Clusters', value: 'cluster' },
-                                    ]}
-                                />
-                            </Box>
-                            <Paper shadow="sm" p="md" withBorder>
+                <div className="sidebar-controls">
+                    <label>Year: {year}</label>
+                    <Slider
+                        min={minYear}
+                        max={maxYear}
+                        value={year}
+                        onChange={setYear}
+                        step={1}
+                        size="xs"
+                        color="indigo"
+                        marks={[
+                            { value: minYear, label: String(minYear) },
+                            { value: maxYear, label: String(maxYear) },
+                        ]}
+                        styles={{ markLabel: { color: '#64748b', fontSize: 10 } }}
+                    />
+
+                    <div style={{ marginTop: 16 }}>
+                        <label>Country</label>
+                        <Select
+                            placeholder="All Countries"
+                            data={countries}
+                            value={selectedCountry}
+                            onChange={setSelectedCountry}
+                            searchable
+                            clearable
+                            size="xs"
+                            styles={{
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
+                                option: { color: '#e2e8f0', '&[dataComboboxSelected]': { background: 'rgba(99,102,241,0.2)' } },
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                        <label>Metric</label>
+                        <Select
+                            data={METRICS.map(m => ({ value: m, label: getMetricLabel(m) }))}
+                            value={metric}
+                            onChange={(v) => setMetric(v || METRICS[0])}
+                            size="xs"
+                            styles={{
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
+                                option: { color: '#e2e8f0', '&[dataComboboxSelected]': { background: 'rgba(99,102,241,0.2)' } },
+                            }}
+                        />
+                    </div>
+                </div>
+            </aside>
+
+            {/* Main content */}
+            <main className="dashboard-main">
+                <LoadingOverlay visible={loading} overlayProps={{ radius: "sm", blur: 2 }} />
+
+                {/* ============= OVERVIEW ============= */}
+                {view === 'overview' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Overview Dashboard</h1>
+                            <p>EU-27 Energy & Climate Analytics — Coordinated Multiple Views ({year})</p>
+                        </div>
+
+                        {/* KPI Row */}
+                        <KPIRow data={analyzedData} sectoralData={sectoralData} year={year} />
+
+                        {/* Main coordinated row: Map + Right Panel */}
+                        <div className="chart-grid chart-grid-2-1" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <div className="chart-card-header">
+                                    <div>
+                                        <div className="chart-card-title">Spatial Clusters</div>
+                                        <div className="chart-card-subtitle">Click a country to select • Click legend to filter cluster</div>
+                                    </div>
+                                </div>
                                 <MapChart
                                     data={analyzedData}
-                                    metric={metric as string}
-                                    mode={mapMode as 'metric' | 'cluster'}
-                                    onCountryClick={handleCountryClick}
-                                    selectedCluster={null}
-                                    selectedCountry={selectedCountry}
+                                    metric={metric}
+                                    mode="cluster"
+                                    height={500}
+                                    clusterNames={clusterNames}
                                 />
-                            </Paper>
-                        </Box>
-                    )}
+                            </div>
 
-                    {view === 'cluster' && (
-                        <Box>
-                            <Title order={3} mb="md">Cluster Analysis</Title>
-                            <Grid>
-                                <Grid.Col span={8}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                <div className="chart-card" style={{ flex: '0 0 auto' }}>
                                     <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
-                                </Grid.Col>
-                                <Grid.Col span={4}>
-                                    <ClusterScatterPlot data={analyzedData} method="umap" />
-                                </Grid.Col>
-                                <Grid.Col span={12}>
-                                    <ClusterCompositionList data={analyzedData} />
-                                </Grid.Col>
-                                <Grid.Col span={12}>
-                                    <ClusterBoxPlot data={analyzedData} clusterNames={clusterNames} />
-                                </Grid.Col>
-                            </Grid>
-                        </Box>
-                    )}
+                                </div>
 
-                    {view === 'timeSeries' && (
-                        <Box>
-                            <Title order={3} mb="md">Temporal Evolution</Title>
-                            <Grid>
-                                <Grid.Col span={12}>
-                                    <EnergyTrendsChart
-                                        data={data || []} // Use raw data for full time series
-                                        selectedCountry={selectedCountry}
-                                        metric={metric as string}
+                                {selectedCountry ? (
+                                    <CountryDetailPanel
+                                        data={analyzedData}
+                                        sectoralData={sectoralData}
+                                        clusterNames={clusterNames}
                                     />
-                                </Grid.Col>
-                                <Grid.Col span={12}>
-                                    <TransitionFlowChart
-                                        data={fullClusteredData}
-                                        selectedCountry={selectedCountry}
-                                    />
-                                </Grid.Col>
-                            </Grid>
-                        </Box>
-                    )}
+                                ) : (
+                                    <div className="chart-card" style={{ flex: 1 }}>
+                                        <ClusterScatterPlot data={analyzedData} method="umap" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                    {view === 'typologies' && (
-                        <Box>
-                            <Title order={3} mb="xs">Country Typologies</Title>
-                            <Text c="dimmed" mb="md" size="sm">
-                                Multivariate K-Means clustering (using Wealth, Industry, Urbanization, HDD, and Density) to categorize EU-27 states.
-                            </Text>
-                            <Grid>
-                                <Grid.Col span={6}>
-                                    <Paper shadow="sm" p="md" withBorder>
-                                        <Title order={5} mb="sm" ta="center">Structural Typology Profile</Title>
-                                        <Text c="dimmed" size="xs" ta="center" mb="md">Average scaled contextual metrics (2023)</Text>
-                                        <TypologyRadarChart data={data} />
-                                    </Paper>
-                                </Grid.Col>
-                                <Grid.Col span={6}>
-                                    <Paper shadow="sm" p="md" withBorder>
-                                        <Title order={5} mb="sm" ta="center">Decarbonization Trajectory by Typology</Title>
-                                        <Text c="dimmed" size="xs" ta="center" mb="md">Performance grouped by underlying structural cluster</Text>
-                                        <TypologyTimeSeriesChart data={data} metricKey={metric as keyof EnergyData} />
-                                    </Paper>
-                                </Grid.Col>
-                            </Grid>
-                        </Box>
-                    )}
+                        {/* Row 2: Emissions pathway */}
+                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
+                            </div>
+                            <div className="chart-card">
+                                <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
+                            </div>
+                        </div>
 
-                    {view === 'methodology' && (
-                        <Box>
-                            <Title order={3} mb="md">Methodology & Validation</Title>
-                            <MethodologyView data={data} year={year} />
-                        </Box>
-                    )}
+                        {/* Row 3: Energy mix + Cluster distribution */}
+                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
+                            </div>
+                            <div className="chart-card">
+                                <TransitionFlowChart data={fullClusteredData} selectedCountry={selectedCountry} />
+                            </div>
+                        </div>
+                    </>
+                )}
 
-                </Container>
-            </AppShell.Main>
-        </AppShell>
+                {/* ============= MAP EXPLORER ============= */}
+                {view === 'map' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Map Explorer</h1>
+                            <p>Spatial distribution of EU-27 energy indicators — hover to compare, click to select</p>
+                        </div>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <SegmentedControl
+                                value={mapMode}
+                                onChange={setMapMode}
+                                data={[
+                                    { label: '📊 Metric Value', value: 'metric' },
+                                    { label: '🎨 Clusters', value: 'cluster' },
+                                ]}
+                                size="xs"
+                            />
+                        </div>
+
+                        <div className="chart-grid chart-grid-3-1">
+                            <div className="chart-card">
+                                <MapChart
+                                    data={analyzedData}
+                                    metric={metric}
+                                    mode={mapMode as 'metric' | 'cluster'}
+                                    height={550}
+                                    clusterNames={clusterNames}
+                                />
+                            </div>
+                            <div>
+                                <CountryDetailPanel
+                                    data={analyzedData}
+                                    sectoralData={sectoralData}
+                                    clusterNames={clusterNames}
+                                />
+                                <div className="chart-card" style={{ marginTop: 12 }}>
+                                    <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* ============= CLUSTER ANALYSIS ============= */}
+                {view === 'cluster' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Cluster Analysis</h1>
+                            <p>Energy profile typologies via K-Means clustering with UMAP projection ({year})</p>
+                        </div>
+
+                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
+                            </div>
+                            <div className="chart-card">
+                                <ClusterScatterPlot data={analyzedData} method="umap" />
+                            </div>
+                        </div>
+
+                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <DendrogramChart data={analyzedData} k={4} />
+                            </div>
+                            <div className="chart-card">
+                                <PCABiplot data={analyzedData} />
+                            </div>
+                        </div>
+
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <ClusterCompositionList data={analyzedData} />
+                        </div>
+
+                        <div className="chart-card">
+                            <ClusterBoxPlot data={analyzedData} clusterNames={clusterNames} />
+                        </div>
+                    </>
+                )}
+
+                {/* ============= HEATMAP ============= */}
+                {view === 'heatmap' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Country × Indicator Heatmap</h1>
+                            <p>Z-score normalized energy indicators — rows ordered by cluster assignment. Hover to highlight across all views.</p>
+                        </div>
+
+                        <div className="chart-grid chart-grid-2-1" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <HeatmapChart data={analyzedData} />
+                            </div>
+                            <div>
+                                <CountryDetailPanel
+                                    data={analyzedData}
+                                    sectoralData={sectoralData}
+                                    clusterNames={clusterNames}
+                                />
+                                <div className="chart-card" style={{ marginTop: 12 }}>
+                                    <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* ============= TYPOLOGIES ============= */}
+                {view === 'typologies' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Country Typologies</h1>
+                            <p>Multivariate K-Means clustering on structural indicators (Wealth, Industry, Urbanization, HDD, Density)</p>
+                        </div>
+
+                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <TypologyRadarChart data={data} />
+                            </div>
+                            <div className="chart-card">
+                                <TypologyTimeSeriesChart data={data} metricKey={metric as keyof EnergyData} />
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* ============= TIME SERIES ============= */}
+                {view === 'timeSeries' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Temporal Evolution</h1>
+                            <p>Energy indicator trends and cluster transition dynamics (2010-2023)</p>
+                        </div>
+
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <EnergyTrendsChart data={data || []} selectedCountry={selectedCountry} metric={metric} />
+                        </div>
+
+                        <div className="chart-card">
+                            <TransitionFlowChart data={fullClusteredData} selectedCountry={selectedCountry} />
+                        </div>
+                    </>
+                )}
+
+                {/* ============= METHODOLOGY ============= */}
+                {view === 'methodology' && (
+                    <>
+                        <div className="page-header">
+                            <h1>Methodology & Validation</h1>
+                            <p>Systematic evaluation of clustering algorithms, parameter selection, and validation metrics</p>
+                        </div>
+                        <MethodologyView data={data} year={year} />
+                    </>
+                )}
+            </main>
+        </div>
+    );
+};
+
+// KPI Row component using real data
+const KPIRow = ({ data, sectoralData, year }: { data: ClusteredData[]; sectoralData: any[]; year: number }) => {
+    const latestSectoral = sectoralData.length > 0 ? sectoralData[sectoralData.length - 1] : null;
+    const avgRenewable = data.length > 0
+        ? data.reduce((acc, d) => acc + (Number(d.renewable_share) || 0), 0) / data.length : 0;
+    const numClusters = new Set(data.map(d => d.cluster)).size;
+
+    return (
+        <div className="kpi-row">
+            <div className="kpi-card">
+                <div className="kpi-label">Countries Analyzed</div>
+                <div className="kpi-value neutral">{data.length}</div>
+            </div>
+            <div className="kpi-card">
+                <div className="kpi-label">Avg Renewable Share</div>
+                <div className="kpi-value positive">{avgRenewable.toFixed(1)}%</div>
+            </div>
+            <div className="kpi-card">
+                <div className="kpi-label">Emissions vs 1990</div>
+                <div className={`kpi-value ${latestSectoral?.emissionsVs1990 < 0 ? 'positive' : 'negative'}`}>
+                    {latestSectoral ? `${latestSectoral.emissionsVs1990.toFixed(1)}%` : '—'}
+                </div>
+            </div>
+            <div className="kpi-card">
+                <div className="kpi-label">Clusters ({year})</div>
+                <div className="kpi-value neutral">{numClusters}</div>
+            </div>
+        </div>
+    );
+};
+
+// Wrapper with InteractionProvider
+export const Dashboard = () => {
+    return (
+        <InteractionProvider>
+            <DashboardInner />
+        </InteractionProvider>
     );
 };

@@ -25,7 +25,8 @@ export const SidebarControls = ({
 }: SidebarControlsProps) => {
 
     const views = [
-        { id: 'map', label: 'Map View', icon: <IconMap size={16} /> },
+        { id: 'overview', label: 'Overview', icon: <IconMap size={16} /> },
+        { id: 'map', label: 'Map Explorer', icon: <IconMap size={16} /> },
         { id: 'cluster', label: 'Cluster Analysis', icon: <IconChartScatter size={16} /> },
         { id: 'typologies', label: 'Typologies', icon: <IconChartDots size={16} /> },
         { id: 'timeSeries', label: 'Time Series', icon: <IconChartDots size={16} /> },

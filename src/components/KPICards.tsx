@@ -1,26 +1,36 @@
 import { SimpleGrid, Paper, Text, Group, ThemeIcon } from '@mantine/core';
-import { IconLeaf, IconFlame, IconBolt, IconWorld } from '@tabler/icons-react';
+import { IconLeaf, IconTarget, IconTrendingDown } from '@tabler/icons-react';
 import { type EnergyData } from '../services/analysis';
+import type { SectoralDataWithTargets } from '../data/useSectoralData';
 
 interface KPICardsProps {
     data: EnergyData[];
+    sectoralData: SectoralDataWithTargets[];
 }
 
-export const KPICards = ({ data }: KPICardsProps) => {
-    if (data.length === 0) return null;
+export const KPICards = ({ data, sectoralData }: KPICardsProps) => {
+    if (data.length === 0 || sectoralData.length === 0) return null;
 
-    // Calculate averages for the latest available year
-    // For simplicity, let's take average over all years for the current selection (or we could select latest year)
-    // Let's filter for the latest year present in the data for a better snapshot
     const latestYear = Math.max(...data.map(d => d.year));
     const latestData = data.filter(d => d.year === latestYear);
+    const latestSectoral = sectoralData.find(d => d.year === latestYear);
 
-    const avgRenewable = latestData.reduce((acc, curr) => acc + curr.renewable_share, 0) / latestData.length;
-    const avgFossil = latestData.reduce((acc, curr) => acc + curr.fossil_share, 0) / latestData.length;
-    const avgDependency = latestData.reduce((acc, curr) => acc + curr.energy_dependency, 0) / latestData.length;
-    const avgGHG = latestData.reduce((acc, curr) => acc + curr.ghg_intensity, 0) / latestData.length;
+    const avgRenewable = latestData.reduce((acc, curr) => acc + (curr.renewable_share || 0), 0) / latestData.length;
+
+    // Fallbacks if no valid sectoral match
+    const emissionsVs1990 = latestSectoral ? latestSectoral.emissionsVs1990 : 0;
+    const currentEmissions = latestSectoral ? latestSectoral.total : 0;
+    const target2030 = latestSectoral ? latestSectoral.target2030 : 0;
+    const distanceToTarget = currentEmissions - target2030;
+    const distancePercent = target2030 > 0 ? (distanceToTarget / latestSectoral!.total) * 100 : 0;
 
     const stats = [
+        {
+            label: `Total Emissions vs 1990`,
+            value: `${emissionsVs1990 > 0 ? '+' : ''}${emissionsVs1990.toFixed(1)}%`,
+            icon: IconTrendingDown,
+            color: emissionsVs1990 < 0 ? 'teal' : 'red'
+        },
         {
             label: `Renewable Share (${latestYear})`,
             value: `${avgRenewable.toFixed(1)}%`,
@@ -28,35 +38,23 @@ export const KPICards = ({ data }: KPICardsProps) => {
             color: 'teal'
         },
         {
-            label: `Fossil Share (${latestYear})`,
-            value: `${avgFossil.toFixed(1)}%`,
-            icon: IconFlame,
-            color: 'orange'
-        },
-        {
-            label: `Energy Dependency (${latestYear})`,
-            value: `${avgDependency.toFixed(1)}%`,
-            icon: IconWorld,
-            color: 'blue'
-        },
-        {
-            label: `GHG Intensity (${latestYear})`,
-            value: avgGHG.toFixed(1),
-            icon: IconBolt,
-            color: 'red'
-        },
+            label: `Distance to 2030 Target`,
+            value: distanceToTarget > 0 ? `${distancePercent.toFixed(1)}% gap` : 'Target Met 🎉',
+            icon: IconTarget,
+            color: distanceToTarget > 0 ? 'orange' : 'green'
+        }
     ];
 
     return (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+        <SimpleGrid cols={{ base: 1, sm: 3 }}>
             {stats.map((stat) => (
-                <Paper withBorder p="md" radius="md" key={stat.label}>
+                <Paper shadow="sm" withBorder p="md" radius="md" key={stat.label}>
                     <Group justify="space-between">
                         <Text size="xs" c="dimmed" fw={700} tt="uppercase">
                             {stat.label}
                         </Text>
-                        <ThemeIcon color={stat.color} variant="light">
-                            <stat.icon size={18} />
+                        <ThemeIcon color={stat.color} variant="light" size="lg">
+                            <stat.icon size={20} stroke={1.5} />
                         </ThemeIcon>
                     </Group>
 
