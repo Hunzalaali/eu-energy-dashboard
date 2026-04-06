@@ -51,7 +51,7 @@ const DashboardInner = () => {
     const [mapMode, setMapMode] = useState<string>('cluster');
     const [view, setView] = useState<string>('overview');
 
-    const { selectedCountry, setSelectedCountry } = useInteraction();
+    const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry } = useInteraction();
 
     const timeSeriesClusters = useMemo(() => {
         if (!data || data.length === 0) return new Map();
@@ -82,6 +82,7 @@ const DashboardInner = () => {
     }, [analyzedData]);
 
     const { data: sectoralData } = useSectoralData(selectedCountry);
+    const { data: compareSectoralData } = useSectoralData(compareCountry);
 
     const maxYear = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
     const minYear = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
@@ -142,6 +143,25 @@ const DashboardInner = () => {
                     </div>
 
                     <div style={{ marginTop: 16 }}>
+                        <label>Compare With</label>
+                        <Select
+                            placeholder="Select to compare..."
+                            data={countries.filter(c => c !== selectedCountry)}
+                            value={compareCountry}
+                            onChange={setCompareCountry}
+                            searchable
+                            clearable
+                            size="xs"
+                            disabled={!selectedCountry}
+                            styles={{
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
+                                option: { color: '#e2e8f0', '&[dataComboboxSelected]': { background: 'rgba(239,68,68,0.2)' } },
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
                         <label>Metric</label>
                         <Select
                             data={METRICS.map(m => ({ value: m, label: getMetricLabel(m) }))}
@@ -197,11 +217,18 @@ const DashboardInner = () => {
                                 </div>
 
                                 {selectedCountry ? (
-                                    <CountryDetailPanel
-                                        data={analyzedData}
-                                        sectoralData={sectoralData}
-                                        clusterNames={clusterNames}
-                                    />
+                                    compareCountry ? (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                                            <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                            <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
+                                        </div>
+                                    ) : (
+                                        <CountryDetailPanel
+                                            data={analyzedData}
+                                            sectoralData={sectoralData}
+                                            clusterNames={clusterNames}
+                                        />
+                                    )
                                 ) : (
                                     <div className="chart-card" style={{ flex: 1 }}>
                                         <ClusterScatterPlot data={analyzedData} method="umap" />
@@ -215,19 +242,43 @@ const DashboardInner = () => {
                             <div className="chart-card">
                                 <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
                             </div>
-                            <div className="chart-card">
-                                <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
-                            </div>
+                            {compareCountry ? (
+                                <div className="chart-card">
+                                    <SectoralEmissionsChart data={compareSectoralData} selectedCountry={compareCountry} highlightedSector={null} />
+                                </div>
+                            ) : (
+                                <div className="chart-card">
+                                    <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
+                                </div>
+                            )}
                         </div>
+
+                        {/* Row 2.5: Goal Tracking (if comparing) */}
+                        {compareCountry && (
+                            <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                                <div className="chart-card">
+                                    <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
+                                </div>
+                                <div className="chart-card">
+                                    <GoalTrackingChart data={compareSectoralData} selectedCountry={compareCountry} />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Row 3: Energy mix + Cluster distribution */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
                             </div>
-                            <div className="chart-card">
-                                <TransitionFlowChart data={fullClusteredData} selectedCountry={selectedCountry} />
-                            </div>
+                            {compareCountry ? (
+                                <div className="chart-card">
+                                    <EnergyMixChart data={data || []} selectedCountry={compareCountry} />
+                                </div>
+                            ) : (
+                                <div className="chart-card">
+                                    <TransitionFlowChart data={fullClusteredData} selectedCountry={selectedCountry} />
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
@@ -263,11 +314,18 @@ const DashboardInner = () => {
                                 />
                             </div>
                             <div>
-                                <CountryDetailPanel
-                                    data={analyzedData}
-                                    sectoralData={sectoralData}
-                                    clusterNames={clusterNames}
-                                />
+                                {compareCountry && selectedCountry ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                        <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
+                                    </div>
+                                ) : (
+                                    <CountryDetailPanel
+                                        data={analyzedData}
+                                        sectoralData={sectoralData}
+                                        clusterNames={clusterNames}
+                                    />
+                                )}
                                 <div className="chart-card" style={{ marginTop: 12 }}>
                                     <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
                                 </div>
@@ -325,11 +383,18 @@ const DashboardInner = () => {
                                 <HeatmapChart data={analyzedData} />
                             </div>
                             <div>
-                                <CountryDetailPanel
-                                    data={analyzedData}
-                                    sectoralData={sectoralData}
-                                    clusterNames={clusterNames}
-                                />
+                                {compareCountry && selectedCountry ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                        <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
+                                    </div>
+                                ) : (
+                                    <CountryDetailPanel
+                                        data={analyzedData}
+                                        sectoralData={sectoralData}
+                                        clusterNames={clusterNames}
+                                    />
+                                )}
                                 <div className="chart-card" style={{ marginTop: 12 }}>
                                     <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
                                 </div>

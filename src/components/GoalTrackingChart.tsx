@@ -14,20 +14,35 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
     const chartData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
-        const base = [...data];
+        const base = [...data].map(d => ({ ...d, projectedTrend: undefined as number | undefined }));
         const lastYear = base[base.length - 1];
+
+        // Ensure we have at least 10 years of data for the slope, or use as much as we have
+        const lookbackYears = 10;
+        const pastYearIndex = Math.max(0, base.length - 1 - lookbackYears);
+        const pastYear = base[pastYearIndex];
+        
+        let slope = 0;
+        if (lastYear.year !== pastYear.year) {
+            slope = (lastYear.total - pastYear.total) / (lastYear.year - pastYear.year);
+        }
+
+        // Start projection from the last actual point
+        lastYear.projectedTrend = lastYear.total;
 
         // Add pseudo-points for the targets to draw the dashed lines out
         base.push({
             ...lastYear,
             year: 2030,
             total: undefined as any, // don't draw actual emissions line here
+            projectedTrend: Math.max(0, lastYear.total + slope * (2030 - lastYear.year)),
         });
 
         base.push({
             ...lastYear,
             year: 2050,
             total: undefined as any,
+            projectedTrend: Math.max(0, lastYear.total + slope * (2050 - lastYear.year)),
         });
 
         return base;
@@ -86,6 +101,17 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
                         stroke="#2f9e44"
                         strokeWidth={2}
                         strokeDasharray="5 5"
+                        dot={false}
+                    />
+
+                    {/* Projected Trend */}
+                    <Line
+                        type="monotone"
+                        dataKey="projectedTrend"
+                        name="Projected Trend (10yr)"
+                        stroke="#e03131"
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
                         dot={false}
                     />
 

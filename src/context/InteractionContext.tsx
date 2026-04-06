@@ -19,6 +19,8 @@ export interface InteractionState {
     selectedCluster: number | null;
     /** Currently hovered cluster ID */
     hoveredCluster: number | null;
+    /** Currently selected secondary/comparison country ISO code */
+    compareCountry: string | null;
 }
 
 interface InteractionContextType extends InteractionState {
@@ -30,6 +32,10 @@ interface InteractionContextType extends InteractionState {
     toggleCountry: (country: string) => void;
     /** Toggle cluster selection */
     toggleCluster: (cluster: number) => void;
+    /** Set secondary comparison country */
+    setCompareCountry: (country: string | null) => void;
+    /** Toggle secondary comparison country */
+    toggleCompareCountry: (country: string) => void;
     /** Reset all selections */
     resetAll: () => void;
 }
@@ -39,6 +45,7 @@ const defaultState: InteractionState = {
     selectedCountry: null,
     selectedCluster: null,
     hoveredCluster: null,
+    compareCountry: null,
 };
 
 const InteractionContext = createContext<InteractionContextType>({
@@ -49,6 +56,8 @@ const InteractionContext = createContext<InteractionContextType>({
     setHoveredCluster: () => {},
     toggleCountry: () => {},
     toggleCluster: () => {},
+    setCompareCountry: () => {},
+    toggleCompareCountry: () => {},
     resetAll: () => {},
 });
 
@@ -85,6 +94,17 @@ export const InteractionProvider: React.FC<{ children: ReactNode }> = ({ childre
         }));
     }, []);
 
+    const setCompareCountry = useCallback((country: string | null) => {
+        setState(prev => ({ ...prev, compareCountry: country }));
+    }, []);
+
+    const toggleCompareCountry = useCallback((country: string) => {
+        setState(prev => ({
+            ...prev,
+            compareCountry: prev.compareCountry === country ? null : country,
+        }));
+    }, []);
+
     const resetAll = useCallback(() => {
         setState(defaultState);
     }, []);
@@ -98,6 +118,8 @@ export const InteractionProvider: React.FC<{ children: ReactNode }> = ({ childre
             setHoveredCluster,
             toggleCountry,
             toggleCluster,
+            setCompareCountry,
+            toggleCompareCountry,
             resetAll,
         }}>
             {children}

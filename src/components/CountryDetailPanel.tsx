@@ -8,6 +8,8 @@ interface CountryDetailPanelProps {
     data: ClusteredData[];
     sectoralData: SectoralDataWithTargets[];
     clusterNames: Record<number, string>;
+    countryCode?: string | null;
+    onClose?: () => void;
 }
 
 const FEATURE_ICONS: Record<string, any> = {
@@ -19,12 +21,13 @@ const FEATURE_ICONS: Record<string, any> = {
     energy_intensity: IconBolt,
 };
 
-export const CountryDetailPanel = ({ data, sectoralData, clusterNames }: CountryDetailPanelProps) => {
+export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCode, onClose }: CountryDetailPanelProps) => {
     const { selectedCountry, setSelectedCountry } = useInteraction();
+    const effectiveCountry = countryCode !== undefined ? countryCode : selectedCountry;
 
-    if (!selectedCountry) return null;
+    if (!effectiveCountry) return null;
 
-    const countryData = data.find(d => d.country === selectedCountry);
+    const countryData = data.find(d => d.country === effectiveCountry);
     if (!countryData) return null;
 
     const latestSectoral = sectoralData.length > 0
@@ -45,7 +48,7 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames }: Country
         >
             <Group justify="space-between" mb="sm">
                 <Group gap="xs">
-                    <Title order={4}>{selectedCountry}</Title>
+                    <Title order={4}>{effectiveCountry}</Title>
                     <Badge
                         size="sm"
                         color={['indigo', 'teal', 'orange', 'red'][countryData.cluster % 4]}
@@ -53,7 +56,7 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames }: Country
                         {clusterNames[countryData.cluster] || `C${countryData.cluster}`}
                     </Badge>
                 </Group>
-                <ActionIcon variant="subtle" onClick={() => setSelectedCountry(null)} size="sm">
+                <ActionIcon variant="subtle" onClick={onClose || (() => setSelectedCountry(null))} size="sm">
                     <IconX size={14} />
                 </ActionIcon>
             </Group>
