@@ -58,13 +58,6 @@ const DashboardInner = () => {
         return performTimeSeriesAnalysis(data as any, 4);
     }, [data]);
 
-    const fullClusteredData = useMemo(() => {
-        return (data || []).map(d => ({
-            ...d,
-            cluster: d.cluster || 0,
-            clusterTimeSeries: timeSeriesClusters.get(d.country)
-        })) as ClusteredData[];
-    }, [data, timeSeriesClusters]);
 
     const analyzedData = useMemo<ClusteredData[]>(() => {
         const yearlyData = performAnalysis((data || []) as any, year);
@@ -80,6 +73,21 @@ const DashboardInner = () => {
         const normalized = normalizeForRadar(analyzedData, centroids);
         return assignClusterNames(normalized);
     }, [analyzedData]);
+
+    // Per-year clustered data for Cluster Distribution Over Time & Transition Path
+    // We run performAnalysis for every unique year so the transition chart reflects
+    // genuine year-by-year energy cluster shifts, not a fixed typology assignment.
+    const allYearsClusteredData = useMemo<ClusteredData[]>(() => {
+        if (!data || data.length === 0) return [];
+        const years = Array.from(new Set((data as any[]).map((d: any) => d.year))).sort() as number[];
+        return years.flatMap(y => {
+            const yearResult = performAnalysis((data || []) as any, y);
+            return yearResult.map((d: any) => ({
+                ...d,
+                clusterTimeSeries: timeSeriesClusters.get(d.country),
+            }));
+        });
+    }, [data, timeSeriesClusters]);
 
     const { data: sectoralData } = useSectoralData(selectedCountry);
     const { data: compareSectoralData } = useSectoralData(compareCountry);
@@ -264,7 +272,7 @@ const DashboardInner = () => {
                             </div>
                         )}
 
-                        {/* Row 3: Energy mix + Cluster distribution */}
+                        {/* Row 3: Energy mix */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
@@ -275,9 +283,14 @@ const DashboardInner = () => {
                                 </div>
                             ) : (
                                 <div className="chart-card">
-                                    <TransitionFlowChart data={fullClusteredData} selectedCountry={selectedCountry} />
+                                    <EnergyMixChart data={data || []} selectedCountry={null} />
                                 </div>
                             )}
+                        </div>
+
+                        {/* Row 4: Cluster Transition Path — always full width so the swimlane has room */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
                         </div>
                     </>
                 )}
@@ -308,7 +321,6 @@ const DashboardInner = () => {
                                     data={analyzedData}
                                     metric={metric}
                                     mode={mapMode as 'metric' | 'cluster'}
-                                    height={550}
                                     clusterNames={clusterNames}
                                 />
                             </div>
@@ -434,7 +446,7 @@ const DashboardInner = () => {
                         </div>
 
                         <div className="chart-card">
-                            <TransitionFlowChart data={fullClusteredData} selectedCountry={selectedCountry} />
+                            <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
                         </div>
                     </>
                 )}

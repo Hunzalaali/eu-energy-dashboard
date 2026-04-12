@@ -87,9 +87,42 @@ export const performAnalysis = (data: EnergyData[], year: number, k: number = 4)
         row.map((val, i) => (val - means[i]) / stds[i])
     );
 
-    // K-Means Clustering
-    const clusteringResult = kmeans(scaledData, k, { initialization: 'kmeans++' });
-    const clusters = clusteringResult.clusters;
+    // K-Means Clustering — consensus run (pick best of 15 by lowest inertia)
+    // This dramatically reduces variance from random initialisation.
+    const euclidDist = (a: number[], b: number[]) =>
+        Math.sqrt(a.reduce((acc, v, i) => acc + Math.pow(v - b[i], 2), 0));
+
+    let bestClusters: number[] = [];
+    let bestCentroids: number[][] = [];
+    let bestInertia = Infinity;
+
+    for (let run = 0; run < 15; run++) {
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        let inertia = 0;
+        result.clusters.forEach((ci, i) => {
+            inertia += Math.pow(euclidDist(scaledData[i], result.centroids[ci]), 2);
+        });
+        if (inertia < bestInertia) {
+            bestInertia   = inertia;
+            bestClusters  = result.clusters;
+            bestCentroids = result.centroids;
+        }
+    }
+
+    // Deterministic label normalisation — sort cluster IDs by their centroid's
+    // renewable_share value (index 0 in FEATURES), ascending.
+    // This means cluster 0 is always the least-renewable group, cluster k-1 is
+    // always the most-renewable group, regardless of random seed or year.
+    const renewableIdx = FEATURES.indexOf('renewable_share'); // 0
+    const sortedClusterIds = Array.from({ length: k }, (_, i) => i)
+        .sort((a, b) => (bestCentroids[a]?.[renewableIdx] ?? 0) - (bestCentroids[b]?.[renewableIdx] ?? 0));
+
+    // Build old-id → new-id mapping
+    const clusterRemap: Record<number, number> = {};
+    sortedClusterIds.forEach((oldId, newId) => { clusterRemap[oldId] = newId; });
+
+    const clusters = bestClusters.map(c => clusterRemap[c] ?? c);
+
 
     // t-SNE
     let tsneResults: number[][] = [];

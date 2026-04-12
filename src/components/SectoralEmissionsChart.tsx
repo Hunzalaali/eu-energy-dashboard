@@ -24,13 +24,13 @@ export const SectoralEmissionsChart = ({ data, selectedCountry, highlightedSecto
             <Box mb="sm">
                 <Title order={5}>Sectoral Emissions Breakdown</Title>
                 <Text size="xs" c="dimmed">
-                    {selectedCountry ? `Decarbonization pathway for ${selectedCountry}` : 'EU Aggregate Approximation'} (1990-2023)
+                    {selectedCountry ? `Decarbonization pathway for ${selectedCountry}` : 'EU Aggregate Approximation'} (2010–2023)
                 </Text>
             </Box>
 
             <ResponsiveContainer width="100%" height={250}>
                 <AreaChart
-                    data={data}
+                    data={data.filter(d => d.year >= 2010)}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                 >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />

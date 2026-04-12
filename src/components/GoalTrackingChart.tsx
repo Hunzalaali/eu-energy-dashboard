@@ -14,7 +14,10 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
     const chartData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
-        const base = [...data].map(d => ({ ...d, projectedTrend: undefined as number | undefined }));
+        // Only show from 2010 onwards for consistency
+        const base = [...data]
+            .filter(d => d.year >= 2010)
+            .map(d => ({ ...d, projectedTrend: undefined as number | undefined }));
         const lastYear = base[base.length - 1];
 
         // Ensure we have at least 10 years of data for the slope, or use as much as we have
@@ -53,7 +56,7 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
             <Box mb="sm">
                 <Title order={5}>Goal Tracking: "The Implementation Gap"</Title>
                 <Text size="xs" c="dimmed">
-                    Progression towards 2030 (-55%) and 2050 (Net Zero) targets for {selectedCountry || "EU"}
+                    Progression towards 2030 (−55%) and 2050 (Net Zero) targets for {selectedCountry || "EU"}
                 </Text>
             </Box>
 
@@ -66,8 +69,8 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
                     <XAxis
                         dataKey="year"
                         type="number"
-                        domain={[1990, 2050]}
-                        ticks={[1990, 2000, 2010, 2020, 2030, 2040, 2050]}
+                        domain={[2010, 2050]}
+                        ticks={[2010, 2015, 2020, 2025, 2030, 2040, 2050]}
                     />
                     <YAxis tickFormatter={(val) => `${(val / 1000).toFixed(1)}k`} />
                     <Tooltip formatter={(value: any) => value !== undefined ? Number(value).toFixed(1) : ''} />

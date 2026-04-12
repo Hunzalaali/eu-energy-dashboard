@@ -36,6 +36,18 @@ const EXACT_COLORS: Record<string, string> = {
     'Fossil-Reliant':     '#7c5c3a', // Brown (same as Fossil Dependent)
     'Post-Fossil':        '#51cf66', // Soft green
     'Nuclear-Powered':    '#7048e8', // Violet (same as Nuclear Core)
+
+    // --- Composite names: renewables mixed with import dependency ---
+    // These clusters are "green" but their defining trait is reliance on imports,
+    // so they get a teal-green rather than the darker forest green of pure renewables.
+    'Imports & Renewables Driven':    '#12b886',
+    'Renewables & Imports Driven':    '#12b886',
+    'Import-Dependent & Green':       '#12b886',
+    'Green & Import-Dependent':       '#12b886',
+    'Import & Green':                 '#12b886',
+    'Green & Imports':                '#12b886',
+    'Renewables & Import-Dependent':  '#12b886',
+    'Import-Dependent & Renewables':  '#12b886',
 };
 
 /**
@@ -43,7 +55,13 @@ const EXACT_COLORS: Record<string, string> = {
  * thematically appropriate colour.  Keywords are checked in priority order.
  */
 const KEYWORD_COLORS: Array<{ keywords: string[]; color: string }> = [
-    { keywords: ['green', 'pioneer', 'renewable', 'post-fossil', 'low-carbon', 'efficient'], color: '#2f9e44' },
+    // Pure green / pioneer / post-fossil → forest green (only when NOT combined with import)
+    { keywords: ['pioneer'],                                                                      color: '#2f9e44' },
+    { keywords: ['post-fossil', 'low-carbon'],                                                    color: '#2f9e44' },
+    // When renewables appear alongside imports → teal-green (distinct from pure green)
+    { keywords: ['renewables & import', 'imports & renew', 'import-dependent & green', 'green & import'], color: '#12b886' },
+    // Pure renewable / green (no import combo) → forest green
+    { keywords: ['green', 'renewable', 'efficient'],                                              color: '#2f9e44' },
     { keywords: ['nuclear'],                                                                  color: '#7048e8' },
     { keywords: ['fossil', 'fossil-reliant'],                                                 color: '#7c5c3a' },
     { keywords: ['carbon', 'carbon-intensive'],                                               color: '#c92a2a' },
