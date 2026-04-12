@@ -22,6 +22,8 @@ import { EnergyTrendsChart } from './EnergyTrendsChart';
 import { TransitionFlowChart } from './TransitionFlowChart';
 import { TypologyRadarChart } from './TypologyRadarChart';
 import { TypologyTimeSeriesChart } from './TypologyTimeSeriesChart';
+import { TypologyCrossTab } from './TypologyCrossTab';
+import { SocioEnergyScatter } from './SocioEnergyScatter';
 import { MethodologyView } from './MethodologyView';
 import { HeatmapChart } from './HeatmapChart';
 import { CountryDetailPanel } from './CountryDetailPanel';
@@ -419,9 +421,13 @@ const DashboardInner = () => {
                     <>
                         <div className="page-header">
                             <h1>Country Typologies</h1>
-                            <p>Multivariate K-Means clustering on structural indicators (Wealth, Industry, Urbanization, HDD, Density)</p>
+                            <p>
+                                Structural K-Means on 5 socioeconomic dimensions — and how those typologies
+                                map onto energy clusters for <strong>{year}</strong>
+                            </p>
                         </div>
 
+                        {/* Row 1: Structural profiles */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <TypologyRadarChart data={data} />
@@ -429,6 +435,26 @@ const DashboardInner = () => {
                             <div className="chart-card">
                                 <TypologyTimeSeriesChart data={data} metricKey={metric as keyof EnergyData} />
                             </div>
+                        </div>
+
+                        {/* Row 2: Cross-tab — typology × energy cluster */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <TypologyCrossTab
+                                typoData={data || []}
+                                energyData={analyzedData}
+                                energyClusterNames={clusterNames}
+                                year={year}
+                            />
+                        </div>
+
+                        {/* Row 3: Socioeconomic factor vs energy outcome scatter */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <SocioEnergyScatter
+                                typoData={data || []}
+                                energyData={analyzedData}
+                                energyClusterNames={clusterNames}
+                                year={year}
+                            />
                         </div>
                     </>
                 )}
