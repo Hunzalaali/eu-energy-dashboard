@@ -67,7 +67,6 @@ export const performAnalysis = (data: EnergyData[], year: number, k: number = 4)
     ) as number[][];
 
     // Check if we have enough data
-    // Check if we have enough data
     if (dataset.length < k) {
         console.warn("Not enough data points for clustering");
         return yearData.map(d => ({ ...d, cluster: 0 }));
@@ -481,109 +480,6 @@ export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange
     });
 };
 
-/**
- * Comparative Algorithm Analysis
- * 
- * Runs K-Means, Hierarchical (Ward's), and DBSCAN on the same data,
- * then computes validation metrics for each. This is the core of the
- * methodology comparison needed for the thesis.
- */
-import { hierarchicalClustering } from './hierarchicalClustering';
-import { dbscan } from './dbscan';
-
-export interface AlgorithmComparison {
-    algorithm: string;
-    k: number;
-    silhouette: number;
-    dbi: number;
-    ch: number;
-    noisePoints?: number;
-    assignments: number[];
-    labels: string[];
-}
-
-export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 4): AlgorithmComparison[] => {
-    const yearData = data.filter((d) => d.year === year);
-    if (yearData.length < k) return [];
-
-    const labels = yearData.map(d => d.country);
-
-    // Extract and standardize features
-    const dataset = yearData.map((d) =>
-        FEATURES.map((f) => (typeof d[f] === 'number' ? d[f] : 0))
-    ) as number[][];
-
-    const means = FEATURES.map((_, i) =>
-        dataset.reduce((acc, row) => acc + row[i], 0) / dataset.length
-    );
-    const stds = FEATURES.map((_, i) => {
-        const mean = means[i];
-        const variance = dataset.reduce((acc, row) => acc + Math.pow(row[i] - mean, 2), 0) / dataset.length;
-        return Math.sqrt(variance) || 1;
-    });
-    const scaledData = dataset.map(row =>
-        row.map((val, i) => (val - means[i]) / stds[i])
-    );
-
-    const results: AlgorithmComparison[] = [];
-
-    // 1. K-Means (with consensus — run 20 times, pick best by inertia)
-    let bestKMeans = { clusters: [] as number[], inertia: Infinity, centroids: [] as number[][] };
-    for (let run = 0; run < 20; run++) {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
-        let inertia = 0;
-        result.clusters.forEach((ci, i) => {
-            inertia += Math.pow(euclideanDistance(scaledData[i], result.centroids[ci]), 2);
-        });
-        if (inertia < bestKMeans.inertia) {
-            bestKMeans = { clusters: result.clusters, inertia, centroids: result.centroids };
-        }
-    }
-
-    results.push({
-        algorithm: 'K-Means (consensus, n=20)',
-        k,
-        silhouette: calculateSilhouette(scaledData, bestKMeans.clusters, k),
-        dbi: calculateDBI(scaledData, bestKMeans.clusters, k),
-        ch: calculateCH(scaledData, bestKMeans.clusters, k),
-        assignments: bestKMeans.clusters,
-        labels,
-    });
-
-    // 2. Hierarchical Clustering (Ward's method)
-    const hierResult = hierarchicalClustering(scaledData, labels, k);
-    const hierK = Math.max(...hierResult.assignments) + 1;
-
-    results.push({
-        algorithm: "Hierarchical (Ward's)",
-        k: hierK,
-        silhouette: calculateSilhouette(scaledData, hierResult.assignments, hierK),
-        dbi: calculateDBI(scaledData, hierResult.assignments, hierK),
-        ch: calculateCH(scaledData, hierResult.assignments, hierK),
-        assignments: hierResult.assignments,
-        labels,
-    });
-
-    // 3. DBSCAN
-    const dbResult = dbscan(scaledData);
-    const dbK = dbResult.numClusters;
-    // For DBSCAN metrics, exclude noise points
-    const dbAssignmentsClean = dbResult.assignments.map(a => a === -1 ? dbK : a); // Treat noise as its own "cluster" for metrics
-    const effectiveK = dbK > 0 ? dbK + (dbResult.noisePoints.length > 0 ? 1 : 0) : 1;
-
-    results.push({
-        algorithm: 'DBSCAN (auto-ε)',
-        k: dbK,
-        silhouette: effectiveK > 1 ? calculateSilhouette(scaledData, dbAssignmentsClean, effectiveK) : 0,
-        dbi: effectiveK > 1 ? calculateDBI(scaledData, dbAssignmentsClean, effectiveK) : 0,
-        ch: effectiveK > 1 ? calculateCH(scaledData, dbAssignmentsClean, effectiveK) : 0,
-        noisePoints: dbResult.noisePoints.length,
-        assignments: dbResult.assignments,
-        labels,
-    });
-
-    return results;
-};
 
 /**
  * Z-score based cluster naming.
@@ -720,6 +616,111 @@ export const assignClusterNames = (centroids: ClusterCentroid[]): Record<number,
     });
 
     return names;
+};
+
+
+/**
+ * Comparative Algorithm Analysis
+ * 
+ * Runs K-Means, Hierarchical (Ward's), and DBSCAN on the same data,
+ * then computes validation metrics for each. This is the core of the
+ * methodology comparison needed for the thesis.
+ */
+import { hierarchicalClustering } from './hierarchicalClustering';
+import { dbscan } from './dbscan';
+
+export interface AlgorithmComparison {
+    algorithm: string;
+    k: number;
+    silhouette: number;
+    dbi: number;
+    ch: number;
+    noisePoints?: number;
+    assignments: number[];
+    labels: string[];
+}
+
+export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 4): AlgorithmComparison[] => {
+    const yearData = data.filter((d) => d.year === year);
+    if (yearData.length < k) return [];
+
+    const labels = yearData.map(d => d.country);
+
+    // Extract and standardize features
+    const dataset = yearData.map((d) =>
+        FEATURES.map((f) => (typeof d[f] === 'number' ? d[f] : 0))
+    ) as number[][];
+
+    const means = FEATURES.map((_, i) =>
+        dataset.reduce((acc, row) => acc + row[i], 0) / dataset.length
+    );
+    const stds = FEATURES.map((_, i) => {
+        const mean = means[i];
+        const variance = dataset.reduce((acc, row) => acc + Math.pow(row[i] - mean, 2), 0) / dataset.length;
+        return Math.sqrt(variance) || 1;
+    });
+    const scaledData = dataset.map(row =>
+        row.map((val, i) => (val - means[i]) / stds[i])
+    );
+
+    const results: AlgorithmComparison[] = [];
+
+    // 1. K-Means (with consensus — run 20 times, pick best by inertia)
+    let bestKMeans = { clusters: [] as number[], inertia: Infinity, centroids: [] as number[][] };
+    for (let run = 0; run < 20; run++) {
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        let inertia = 0;
+        result.clusters.forEach((ci, i) => {
+            inertia += Math.pow(euclideanDistance(scaledData[i], result.centroids[ci]), 2);
+        });
+        if (inertia < bestKMeans.inertia) {
+            bestKMeans = { clusters: result.clusters, inertia, centroids: result.centroids };
+        }
+    }
+
+    results.push({
+        algorithm: 'K-Means (consensus, n=20)',
+        k,
+        silhouette: calculateSilhouette(scaledData, bestKMeans.clusters, k),
+        dbi: calculateDBI(scaledData, bestKMeans.clusters, k),
+        ch: calculateCH(scaledData, bestKMeans.clusters, k),
+        assignments: bestKMeans.clusters,
+        labels,
+    });
+
+    // 2. Hierarchical Clustering (Ward's method)
+    const hierResult = hierarchicalClustering(scaledData, labels, k);
+    const hierK = Math.max(...hierResult.assignments) + 1;
+
+    results.push({
+        algorithm: "Hierarchical (Ward's)",
+        k: hierK,
+        silhouette: calculateSilhouette(scaledData, hierResult.assignments, hierK),
+        dbi: calculateDBI(scaledData, hierResult.assignments, hierK),
+        ch: calculateCH(scaledData, hierResult.assignments, hierK),
+        assignments: hierResult.assignments,
+        labels,
+    });
+
+    // 3. DBSCAN
+    const dbResult = dbscan(scaledData);
+    const dbK = dbResult.numClusters;
+    // For DBSCAN metrics, exclude noise points
+    const dbAssignmentsClean = dbResult.assignments.map(a => a === -1 ? dbK : a); // Treat noise as its own "cluster" for metrics
+    const effectiveK = dbK > 0 ? dbK + (dbResult.noisePoints.length > 0 ? 1 : 0) : 1;
+
+    results.push({
+        algorithm: 'DBSCAN (auto-ε)',
+        k: dbK,
+        silhouette: effectiveK > 1 ? calculateSilhouette(scaledData, dbAssignmentsClean, effectiveK) : 0,
+        dbi: effectiveK > 1 ? calculateDBI(scaledData, dbAssignmentsClean, effectiveK) : 0,
+        ch: effectiveK > 1 ? calculateCH(scaledData, dbAssignmentsClean, effectiveK) : 0,
+        noisePoints: dbResult.noisePoints.length,
+        assignments: dbResult.assignments,
+        labels,
+    });
+
+    return results;
 };
 
 export interface BoxPlotStat {

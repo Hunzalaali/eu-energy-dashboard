@@ -93,7 +93,7 @@ const DashboardInner = () => {
             {/* Sidebar */}
             <aside className="dashboard-sidebar">
                 <div className="logo">🇪🇺 EU Energy Dashboard</div>
-                <div className="logo-sub">Thesis Visual Analytics Platform</div>
+                <div className="logo-sub">Visual Analytics of Energy Transition</div>
 
                 <div className="nav-section">Views</div>
                 {VIEWS.map(v => (
@@ -187,7 +187,7 @@ const DashboardInner = () => {
                     <>
                         <div className="page-header">
                             <h1>Overview Dashboard</h1>
-                            <p>EU-27 Energy & Climate Analytics — Coordinated Multiple Views ({year})</p>
+                            <p>EU-27 Energy Analytics — Coordinated Multiple Views ({year})</p>
                         </div>
 
                         {/* KPI Row */}
@@ -206,7 +206,6 @@ const DashboardInner = () => {
                                     data={analyzedData}
                                     metric={metric}
                                     mode="cluster"
-                                    height={500}
                                     clusterNames={clusterNames}
                                 />
                             </div>
@@ -457,7 +456,7 @@ const DashboardInner = () => {
 
 // KPI Row component using real data
 const KPIRow = ({ data, sectoralData, year }: { data: ClusteredData[]; sectoralData: any[]; year: number }) => {
-    const latestSectoral = sectoralData.length > 0 ? sectoralData[sectoralData.length - 1] : null;
+    const latestSectoral = sectoralData.find(d => d.year === year);
     const avgRenewable = data.length > 0
         ? data.reduce((acc, d) => acc + (Number(d.renewable_share) || 0), 0) / data.length : 0;
     const numClusters = new Set(data.map(d => d.cluster)).size;
@@ -473,9 +472,9 @@ const KPIRow = ({ data, sectoralData, year }: { data: ClusteredData[]; sectoralD
                 <div className="kpi-value positive">{avgRenewable.toFixed(1)}%</div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Emissions vs 1990</div>
-                <div className={`kpi-value ${latestSectoral?.emissionsVs1990 < 0 ? 'positive' : 'negative'}`}>
-                    {latestSectoral ? `${latestSectoral.emissionsVs1990.toFixed(1)}%` : '—'}
+                <div className="kpi-label">Emissions vs 2000</div>
+                <div className={`kpi-value ${latestSectoral?.emissionsVs2000 < 0 ? 'positive' : 'negative'}`}>
+                    {latestSectoral ? `${latestSectoral.emissionsVs2000.toFixed(1)}%` : '—'}
                 </div>
             </div>
             <div className="kpi-card">

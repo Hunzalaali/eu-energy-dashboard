@@ -43,13 +43,13 @@ interface MapChartProps {
     data: ClusteredData[];
     metric: string;
     mode?: 'metric' | 'cluster';
-    height?: number;
+    // height?: any;
     showLegend?: boolean;
     clusterNames?: Record<number, string>;
 }
 
 const MapChart: React.FC<MapChartProps> = ({
-    data, metric, mode = 'cluster', height = 500,
+    data, metric, mode = 'cluster',
     showLegend = true, clusterNames,
 }) => {
     const {
@@ -97,7 +97,7 @@ const MapChart: React.FC<MapChartProps> = ({
     );
 
     return (
-        <div style={{ position: 'relative', height }}>
+        <div style={{ position: 'relative', height: "100%" }}>
             {/* Legend overlay */}
             {showLegend && (
                 <div style={{
@@ -158,8 +158,8 @@ const MapChart: React.FC<MapChartProps> = ({
             <ComposableMap
                 projection="geoMercator"
                 projectionConfig={{ center: [15, 52], scale: 650 }}
-                height={height}
-                style={{ width: '100%', height: '100%' }}
+                // height='100%'
+                style={{ width: '100%', height: '100vh' }}
             >
                 <ZoomableGroup zoom={1} center={[15, 52]}>
                     <Geographies geography={GEO_URL}>

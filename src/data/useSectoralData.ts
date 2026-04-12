@@ -31,13 +31,13 @@ export interface SectoralEmissions {
  * Processed sectoral data with computed policy targets.
  * 
  * Targets are derived from the EU's Fit for 55 package:
- *   - 2030 target: −55% vs 1990 baseline (European Climate Law, Regulation 2021/1119)
+ *   - 2030 target: −55% vs 2000 baseline (European Climate Law, Regulation 2021/1119)
  *   - 2050 target: Net-zero with ~10% residual (European Green Deal)
  */
 export interface SectoralDataWithTargets extends SectoralEmissions {
     target2030: number;
     target2050: number;
-    emissionsVs1990: number;  // Percentage change vs 1990 baseline
+    emissionsVs2000: number;  // Percentage change vs 2000 baseline
 }
 
 export const useSectoralData = (selectedCountry: string | null) => {
@@ -112,16 +112,16 @@ export const useSectoralData = (selectedCountry: string | null) => {
         // Sort by year
         filtered.sort((a, b) => a.year - b.year);
 
-        // Find the 1990 baseline for target computation
-        const baseline1990 = filtered.find(d => d.year === 1990);
-        const baselineTotal = baseline1990 ? baseline1990.total : filtered[0]?.total || 1;
+        // Find the 2000 baseline for target computation
+        const baseline2000 = filtered.find(d => d.year === 2000);
+        const baselineTotal = baseline2000 ? baseline2000.total : filtered[0]?.total || 1;
 
         // Compute targets and relative change
         return filtered.map(d => ({
             ...d,
-            target2030: baselineTotal * 0.45,   // -55% = keep 45% of 1990
+            target2030: baselineTotal * 0.45,   // -55% = keep 45% of 2000
             target2050: baselineTotal * 0.10,    // Net-zero ≈ 10% residual
-            emissionsVs1990: ((d.total - baselineTotal) / baselineTotal) * 100,
+            emissionsVs2000: ((d.total - baselineTotal) / baselineTotal) * 100,
         }));
     })();
 
