@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Paper, Title, Text, Group, Stack, Grid, SegmentedControl } from '@mantine/core';
-import { type ClusteredData, reclusterData } from '../services/analysis';
+import { type ClusteredData, reclusterData, assignClusterNames, getClusterCentroids, normalizeForRadar } from '../services/analysis';
 import ClusterRadarChart from './ClusterRadarChart';
+import { getClusterColorById } from '../utils/clusterColors';
 
 interface ClusterAnalysisProps {
     data: ClusteredData[];
 }
-
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
 const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
     const [method, setMethod] = useState<'tsne' | 'umap'>('tsne');
@@ -33,6 +32,14 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
 
     // Use displayData instead of data for all charts below
     const chartData = displayData;
+
+    // Compute cluster names for consistent coloring
+    const clusterNames = React.useMemo(() => {
+        if (!displayData || displayData.length === 0) return {};
+        const centroids = getClusterCentroids(displayData);
+        const normalized = normalizeForRadar(displayData, centroids);
+        return assignClusterNames(normalized);
+    }, [displayData]);
 
     return (
         <Stack gap="lg">
@@ -74,7 +81,7 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                                 <Legend />
                                 <Scatter name="Countries" data={chartData}>
                                     {chartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[entry.cluster % COLORS.length]} />
+                                        <Cell key={`cell-${index}`} fill={getClusterColorById(entry.cluster, clusterNames)} />
                                     ))}
                                 </Scatter>
                             </ScatterChart>
@@ -83,7 +90,7 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                         <Group mt="md" gap="xs" wrap="wrap">
                             {Array.from(new Set(chartData.map(d => d.cluster))).sort().map(cluster => (
                                 <Group key={cluster} gap="xs">
-                                    <div style={{ width: 12, height: 12, backgroundColor: COLORS[cluster % COLORS.length], borderRadius: '50%' }} />
+                                    <div style={{ width: 12, height: 12, backgroundColor: getClusterColorById(cluster, clusterNames), borderRadius: '50%' }} />
                                     <Text size="xs" c="dimmed">
                                         Group {cluster}
                                     </Text>
@@ -104,7 +111,7 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
                     {Array.from(new Set(chartData.map(d => d.cluster))).sort().map(cluster => (
                         <Grid.Col key={cluster} span={{ base: 12, sm: 6, lg: 3 }}>
                             <Group gap="xs" mb={5}>
-                                <div style={{ width: 12, height: 12, backgroundColor: COLORS[cluster % COLORS.length], borderRadius: '50%' }} />
+                                <div style={{ width: 12, height: 12, backgroundColor: getClusterColorById(cluster, clusterNames), borderRadius: '50%' }} />
                                 <Text fw={600}>Cluster {cluster}</Text>
                             </Group>
                             <Text size="sm" style={{ lineHeight: 1.4 }}>

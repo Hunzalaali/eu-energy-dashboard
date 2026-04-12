@@ -230,7 +230,7 @@ const DashboardInner = () => {
                                     )
                                 ) : (
                                     <div className="chart-card" style={{ flex: 1 }}>
-                                        <ClusterScatterPlot data={analyzedData} method="umap" />
+                                        <ClusterScatterPlot data={analyzedData} method="umap" clusterNames={clusterNames} />
                                     </div>
                                 )}
                             </div>
@@ -346,7 +346,7 @@ const DashboardInner = () => {
                                 <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
                             </div>
                             <div className="chart-card">
-                                <ClusterScatterPlot data={analyzedData} method="umap" />
+                                <ClusterScatterPlot data={analyzedData} method="umap" clusterNames={clusterNames} />
                             </div>
                         </div>
 

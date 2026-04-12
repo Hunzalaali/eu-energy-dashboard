@@ -2,13 +2,12 @@ import { useMemo } from 'react';
 import { Paper, Title, Text, SimpleGrid } from '@mantine/core';
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ErrorBar, Cell } from 'recharts';
 import { type ClusteredData, getBoxPlotStats, FEATURES, getMetricLabel } from '../services/analysis';
+import { getClusterColorById } from '../utils/clusterColors';
 
 interface ClusterBoxPlotProps {
     data: ClusteredData[];
     clusterNames: Record<number, string>;
 }
-
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
 export const ClusterBoxPlot = ({ data, clusterNames }: ClusterBoxPlotProps) => {
 
@@ -29,7 +28,6 @@ export const ClusterBoxPlot = ({ data, clusterNames }: ClusterBoxPlotProps) => {
                         feature={feature}
                         data={data}
                         clusters={clusters}
-                        colors={COLORS}
                         clusterNames={clusterNames}
                     />
                 ))}
@@ -38,7 +36,7 @@ export const ClusterBoxPlot = ({ data, clusterNames }: ClusterBoxPlotProps) => {
     );
 };
 
-const FeatureBoxPlot = ({ feature, data, clusters, colors, clusterNames }: { feature: string, data: ClusteredData[], clusters: number[], colors: string[], clusterNames: Record<number, string> }) => {
+const FeatureBoxPlot = ({ feature, data, clusters, clusterNames }: { feature: string, data: ClusteredData[], clusters: number[], clusterNames: Record<number, string> }) => {
 
     const chartData = useMemo(() => {
         return clusters.map(c => {
@@ -95,7 +93,7 @@ const FeatureBoxPlot = ({ feature, data, clusters, colors, clusterNames }: { fea
                     }}>
                         {
                             (chartData as any).map((_entry: any, index: number) => (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                <Cell key={`cell-${index}`} fill={getClusterColorById(clusters[index], clusterNames)} />
                             ))
                         }
                     </Bar>

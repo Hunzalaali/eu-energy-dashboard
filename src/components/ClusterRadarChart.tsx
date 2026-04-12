@@ -3,13 +3,12 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { Paper, Title, Text } from '@mantine/core';
 import { type ClusteredData, getClusterCentroids, normalizeForRadar, FEATURES, getMetricLabel } from '../services/analysis';
 import { useInteraction } from '../context/InteractionContext';
+import { getClusterColorById } from '../utils/clusterColors';
 
 interface ClusterRadarChartProps {
     data: ClusteredData[];
     clusterNames?: Record<number, string>;
 }
-
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
 const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterNames }) => {
     const { hoveredCountry, selectedCountry, selectedCluster } = useInteraction();
@@ -70,8 +69,8 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                             key={clusterId}
                             name={clusterNames ? `${clusterNames[clusterId]} (C${clusterId})` : `C${clusterId}`}
                             dataKey={`Cluster ${clusterId}`}
-                            stroke={COLORS[clusterId % COLORS.length]}
-                            fill={COLORS[clusterId % COLORS.length]}
+                            stroke={getClusterColorById(clusterId, clusterNames)}
+                            fill={getClusterColorById(clusterId, clusterNames)}
                             fillOpacity={selectedCluster !== null && selectedCluster !== clusterId ? 0.03 : 0.2}
                             strokeOpacity={selectedCluster !== null && selectedCluster !== clusterId ? 0.15 : 1}
                             strokeWidth={selectedCluster === clusterId ? 3 : 1.5}

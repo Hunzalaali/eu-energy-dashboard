@@ -4,6 +4,7 @@ import { scaleQuantize } from "d3-scale";
 import { type ClusteredData, getMetricLabel } from "../services/analysis";
 import { Tooltip, Text, Group, Badge } from "@mantine/core";
 import { useInteraction } from "../context/InteractionContext";
+import { getClusterColorById } from "../utils/clusterColors";
 
 const GEO_URL = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
 
@@ -18,7 +19,6 @@ const EUROPE_COUNTRIES = [
     "Turkey", "Ukraine", "United Kingdom", "Vatican"
 ];
 
-const CLUSTER_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
 
 const NAME_TO_ISO: { [key: string]: string } = {
     "Austria": "AT", "Belgium": "BE", "Bulgaria": "BG", "Cyprus": "CY",
@@ -116,7 +116,7 @@ const MapChart: React.FC<MapChartProps> = ({
                                     leftSection={
                                         <div style={{
                                             width: 8, height: 8, borderRadius: '50%',
-                                            backgroundColor: CLUSTER_COLORS[c % CLUSTER_COLORS.length],
+                                            backgroundColor: getClusterColorById(c, clusterNames),
                                         }} />
                                     }
                                     onClick={() => toggleCluster(c)}
@@ -176,7 +176,7 @@ const MapChart: React.FC<MapChartProps> = ({
                                     let fill = "#EEE";
                                     if (isEU && curValue !== undefined) {
                                         if (mode === 'cluster') {
-                                            fill = CLUSTER_COLORS[curValue % CLUSTER_COLORS.length];
+                                            fill = getClusterColorById(curValue, clusterNames);
                                         } else {
                                             fill = (colorScale ? colorScale(curValue) : "#EEE") || "#EEE";
                                         }

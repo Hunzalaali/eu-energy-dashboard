@@ -1,17 +1,17 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Paper, Title, Text, Group } from '@mantine/core';
 import { type ClusteredData } from '../services/analysis';
 import { useInteraction } from '../context/InteractionContext';
+import { getClusterColorById } from '../utils/clusterColors';
 
 interface ClusterScatterPlotProps {
     data: ClusteredData[];
     method?: 'umap' | 'tsne';
+    clusterNames?: Record<number, string>;
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F', '#FFBB28', '#FF8042'];
-
-export const ClusterScatterPlot = ({ data, method = 'umap' }: ClusterScatterPlotProps) => {
+export const ClusterScatterPlot = ({ data, method = 'umap', clusterNames }: ClusterScatterPlotProps) => {
     const { hoveredCountry, selectedCountry, selectedCluster, setHoveredCountry, toggleCountry } = useInteraction();
 
     const chartData = useMemo(() => {
@@ -64,9 +64,9 @@ export const ClusterScatterPlot = ({ data, method = 'umap' }: ClusterScatterPlot
                         return (
                             <Scatter
                                 key={clusterId}
-                                name={`C${clusterId}`}
+                                name={clusterNames?.[clusterId] || `C${clusterId}`}
                                 data={clusterData}
-                                fill={COLORS[clusterId % COLORS.length]}
+                                fill={getClusterColorById(clusterId, clusterNames)}
                                 fillOpacity={isClusterDimmed ? 0.1 : 1}
                                 onMouseEnter={(e: any) => {
                                     if (e?.payload?.country) setHoveredCountry(e.payload.country);
@@ -83,7 +83,7 @@ export const ClusterScatterPlot = ({ data, method = 'umap' }: ClusterScatterPlot
                                         <Cell
                                             key={idx}
                                             r={isHighlighted ? 9 : 5}
-                                            fill={COLORS[clusterId % COLORS.length]}
+                                            fill={getClusterColorById(clusterId, clusterNames)}
                                             stroke={isHighlighted ? '#e03131' : '#fff'}
                                             strokeWidth={isHighlighted ? 3 : 1}
                                             style={{ transition: 'all 0.2s' }}
