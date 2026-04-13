@@ -374,7 +374,7 @@ const DashboardInner = () => {
                         </div>
 
                         <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <ClusterCompositionList data={analyzedData} />
+                            <ClusterCompositionList data={analyzedData} clusterNames={clusterNames} />
                         </div>
 
                         <div className="chart-card">
