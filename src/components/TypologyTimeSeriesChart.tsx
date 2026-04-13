@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import type { EnergyData } from '../data/useEnergyData';
 
 interface TypologyTimeSeriesChartProps {
     data: EnergyData[];
     metricKey: keyof EnergyData;
+    year: number;
 }
 
 export const TypologyTimeSeriesChart: React.FC<TypologyTimeSeriesChartProps> = ({
     data,
-    metricKey
+    metricKey,
+    year,
 }) => {
     const chartData = useMemo(() => {
         if (data.length === 0) return [];
@@ -77,6 +79,13 @@ export const TypologyTimeSeriesChart: React.FC<TypologyTimeSeriesChartProps> = (
                         labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
                     />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <ReferenceLine
+                        x={year}
+                        stroke="rgba(255,255,255,0.5)"
+                        strokeWidth={2}
+                        strokeDasharray="4 3"
+                        label={{ value: String(year), position: 'insideTopRight', fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
+                    />
                     {clusters.map((clusterName, i) => (
                         <Line
                             key={clusterName}

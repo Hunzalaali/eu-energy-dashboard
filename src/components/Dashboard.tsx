@@ -430,10 +430,10 @@ const DashboardInner = () => {
                         {/* Row 1: Structural profiles */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
-                                <TypologyRadarChart data={data} />
+                                <TypologyRadarChart data={data} year={year} />
                             </div>
                             <div className="chart-card">
-                                <TypologyTimeSeriesChart data={data} metricKey={metric as keyof EnergyData} />
+                                <TypologyTimeSeriesChart data={data} metricKey={metric as keyof EnergyData} year={year} />
                             </div>
                         </div>
 

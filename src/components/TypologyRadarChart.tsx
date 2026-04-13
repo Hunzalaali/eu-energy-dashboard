@@ -5,12 +5,13 @@ import type { EnergyData } from '../data/useEnergyData';
 
 interface TypologyRadarChartProps {
     data: EnergyData[];
+    year: number;
 }
 
-export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data }) => {
+export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, year }) => {
     const radarData = useMemo(() => {
-        // Only use 2023 data for building the radar profile
-        const latestData = data.filter(d => d.year === 2023 && d.cluster !== undefined && d.cluster !== -1);
+        // Use the selected year's data for building the radar profile
+        const latestData = data.filter(d => d.year === year && d.cluster !== undefined && d.cluster !== -1);
 
         if (latestData.length === 0) return [];
 
@@ -80,7 +81,7 @@ export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data }) 
             return point;
         });
 
-    }, [data]);
+    }, [data, year]);
 
     // Colors for the 4 clusters
     const clusterColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
