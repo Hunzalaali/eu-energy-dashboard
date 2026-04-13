@@ -5,7 +5,6 @@ import {
     IconTimeline, IconFlask, IconHierarchy, IconGridDots,
 } from '@tabler/icons-react';
 import { performAnalysis, performTimeSeriesAnalysis, assignClusterNames, getClusterCentroids, normalizeForRadar, getMetricLabel, type ClusteredData } from '../services/analysis';
-import type { EnergyData } from '../data/useEnergyData';
 import { useEnergyData } from '../data/useEnergyData';
 import { useSectoralData } from '../data/useSectoralData';
 import { InteractionProvider, useInteraction } from '../context/InteractionContext';
@@ -21,7 +20,7 @@ import { EnergyMixChart } from './EnergyMixChart';
 import { EnergyTrendsChart } from './EnergyTrendsChart';
 import { TransitionFlowChart } from './TransitionFlowChart';
 import { TypologyRadarChart } from './TypologyRadarChart';
-import { TypologyTimeSeriesChart } from './TypologyTimeSeriesChart';
+
 import { TypologyCrossTab } from './TypologyCrossTab';
 import { SocioEnergyScatter } from './SocioEnergyScatter';
 import { MethodologyView } from './MethodologyView';
@@ -364,7 +363,7 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                        <div className="chart-grid chart-grid-1" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <DendrogramChart data={analyzedData} k={4} />
                             </div>
@@ -427,27 +426,22 @@ const DashboardInner = () => {
                             </p>
                         </div>
 
-                        {/* Row 1: Structural profiles */}
-                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                        {/* Row 1: Cross-tab (dominant) + Radar profile (compact) */}
+                        <div className="chart-grid chart-grid-1-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <TypologyRadarChart data={data} year={year} />
                             </div>
                             <div className="chart-card">
-                                <TypologyTimeSeriesChart data={data} metricKey={metric as keyof EnergyData} year={year} />
+                                <TypologyCrossTab
+                                    typoData={data || []}
+                                    energyData={analyzedData}
+                                    energyClusterNames={clusterNames}
+                                    year={year}
+                                />
                             </div>
                         </div>
 
-                        {/* Row 2: Cross-tab — typology × energy cluster */}
-                        <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <TypologyCrossTab
-                                typoData={data || []}
-                                energyData={analyzedData}
-                                energyClusterNames={clusterNames}
-                                year={year}
-                            />
-                        </div>
-
-                        {/* Row 3: Socioeconomic factor vs energy outcome scatter */}
+                        {/* Row 2: Socioeconomic factor vs energy outcome scatter — full width */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <SocioEnergyScatter
                                 typoData={data || []}

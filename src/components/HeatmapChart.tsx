@@ -94,10 +94,10 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
                     {FEATURES.map((f, col) => (
                         <text
                             key={f}
-                            x={labelW + clusterW + col * cellW + cellW / 2}
-                            y={headerH - 8}
+                            x={labelW + clusterW + col * cellW + cellW / 0.6}
+                            y={headerH - 50}
                             textAnchor="end"
-                            fontSize={10}
+                            fontSize={8}
                             fill="#666"
                             transform={`rotate(-45, ${labelW + clusterW + col * cellW + cellW / 2}, ${headerH - 8})`}
                         >

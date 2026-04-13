@@ -22,7 +22,7 @@ export const ClusterCompositionList = ({ data, clusterNames }: ClusterCompositio
     const clusters = Object.keys(grouped).map(Number).sort((a, b) => a - b);
 
     return (
-        <Paper shadow="xs" p="md" withBorder style={{ maxHeight: 400, display: 'flex', flexDirection: 'column' }}>
+        <Paper shadow="xs" p="md" withBorder style={{ display: 'flex', flexDirection: 'column' }}>
             <Title order={4} mb="xs">Cluster Composition</Title>
             <Text size="xs" c="dimmed" mb="md">Countries assigned to each energy cluster for the selected year</Text>
             <ScrollArea flex={1}>
