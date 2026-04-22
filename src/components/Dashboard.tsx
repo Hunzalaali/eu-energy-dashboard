@@ -1,10 +1,14 @@
 import { useState, useMemo } from 'react';
 import { LoadingOverlay, Slider, Select, SegmentedControl } from '@mantine/core';
 import {
-    IconLayoutDashboard, IconMap, IconChartScatter,
+    IconLayoutDashboard, IconChartScatter,
     IconTimeline, IconFlask, IconHierarchy, IconGridDots,
 } from '@tabler/icons-react';
-import { performAnalysis, performTimeSeriesAnalysis, assignClusterNames, getClusterCentroids, normalizeForRadar, getMetricLabel, type ClusteredData } from '../services/analysis';
+import {
+    performStableAnalysis, buildStableCentroids,
+    assignClusterNames, getClusterCentroids, normalizeForRadar,
+    getMetricLabel, type ClusteredData,
+} from '../services/analysis';
 import { useEnergyData } from '../data/useEnergyData';
 import { useSectoralData } from '../data/useSectoralData';
 import { InteractionProvider, useInteraction } from '../context/InteractionContext';
@@ -13,93 +17,83 @@ import MapChart from './MapChart';
 import ClusterRadarChart from './ClusterRadarChart';
 import { ClusterScatterPlot } from './ClusterScatterPlot';
 import { ClusterCompositionList } from './ClusterCompositionList';
-import { ClusterBoxPlot } from './ClusterBoxPlot';
 import { SectoralEmissionsChart } from './SectoralEmissionsChart';
 import { GoalTrackingChart } from './GoalTrackingChart';
 import { EnergyMixChart } from './EnergyMixChart';
 import { EnergyTrendsChart } from './EnergyTrendsChart';
 import { TransitionFlowChart } from './TransitionFlowChart';
 import { TypologyRadarChart } from './TypologyRadarChart';
-
 import { TypologyCrossTab } from './TypologyCrossTab';
 import { SocioEnergyScatter } from './SocioEnergyScatter';
 import { MethodologyView } from './MethodologyView';
 import { HeatmapChart } from './HeatmapChart';
 import { CountryDetailPanel } from './CountryDetailPanel';
 import { DendrogramChart } from './DendrogramChart';
-import { PCABiplot } from './PCABiplot';
+import { ClusterStabilityChart } from './ClusterStabilityChart';
 
 const METRICS: string[] = [
     'renewable_share', 'energy_dependency', 'ghg_intensity',
     'energy_intensity', 'fossil_share', 'nuclear_share'
 ];
 
+// Map Explorer removed as separate tab — map is integrated directly into Overview.
 const VIEWS = [
-    { id: 'overview', label: 'Overview', icon: IconLayoutDashboard },
-    { id: 'map', label: 'Map Explorer', icon: IconMap },
-    { id: 'cluster', label: 'Cluster Analysis', icon: IconChartScatter },
-    { id: 'heatmap', label: 'Heatmap', icon: IconGridDots },
-    { id: 'typologies', label: 'Typologies', icon: IconHierarchy },
-    { id: 'timeSeries', label: 'Time Series', icon: IconTimeline },
-    { id: 'methodology', label: 'Methodology', icon: IconFlask },
+    { id: 'overview',     label: 'Overview',          icon: IconLayoutDashboard },
+    { id: 'cluster',      label: 'Cluster Analysis',  icon: IconChartScatter },
+    { id: 'heatmap',      label: 'Heatmap',           icon: IconGridDots },
+    { id: 'typologies',   label: 'Typologies',         icon: IconHierarchy },
+    { id: 'timeSeries',   label: 'Time Series',        icon: IconTimeline },
+    { id: 'methodology',  label: 'Methodology',        icon: IconFlask },
 ];
 
-// Inner component that reads the interaction context
+// ──────────────────────────────────────────────────────────────────────────────
 const DashboardInner = () => {
     const { data, loading } = useEnergyData();
-    const [year, setYear] = useState<number>(2023);
+    const [year, setYear]     = useState<number>(2023);
     const [metric, setMetric] = useState<string>('renewable_share');
     const [mapMode, setMapMode] = useState<string>('cluster');
-    const [view, setView] = useState<string>('overview');
+    const [view, setView]     = useState<string>('overview');
 
     const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry } = useInteraction();
 
-    const timeSeriesClusters = useMemo(() => {
-        if (!data || data.length === 0) return new Map();
-        return performTimeSeriesAnalysis(data as any, 4);
+    // ── Stable centroids: computed once from all-years country averages ────────
+    const stableCentroids = useMemo<number[][]>(() => {
+        if (!data || data.length === 0) return [];
+        return buildStableCentroids(data as any, 4);
     }, [data]);
 
-
+    // ── Per-year analysis using stable centroids ───────────────────────────────
     const analyzedData = useMemo<ClusteredData[]>(() => {
-        const yearlyData = performAnalysis((data || []) as any, year);
-        return yearlyData.map((d: any) => ({
-            ...d,
-            clusterTimeSeries: timeSeriesClusters.get(d.country)
-        }));
-    }, [data, year, timeSeriesClusters]);
+        if (stableCentroids.length === 0) return [];
+        return performStableAnalysis((data || []) as any, year, 4, stableCentroids);
+    }, [data, year, stableCentroids]);
 
+    // ── All-years data (same stable centroids) ────────────────────────────────
+    const allYearsClusteredData = useMemo<ClusteredData[]>(() => {
+        if (!data || data.length === 0 || stableCentroids.length === 0) return [];
+        const years = Array.from(new Set((data as any[]).map((d: any) => d.year))).sort() as number[];
+        return years.flatMap(y => performStableAnalysis((data || []) as any, y, 4, stableCentroids));
+    }, [data, stableCentroids]);
+
+    // ── Cluster names (derived from current year's centroids) ─────────────────
     const clusterNames = useMemo(() => {
         if (analyzedData.length === 0) return {};
-        const centroids = getClusterCentroids(analyzedData);
+        const centroids  = getClusterCentroids(analyzedData);
         const normalized = normalizeForRadar(analyzedData, centroids);
         return assignClusterNames(normalized);
     }, [analyzedData]);
 
-    // Per-year clustered data for Cluster Distribution Over Time & Transition Path
-    // We run performAnalysis for every unique year so the transition chart reflects
-    // genuine year-by-year energy cluster shifts, not a fixed typology assignment.
-    const allYearsClusteredData = useMemo<ClusteredData[]>(() => {
-        if (!data || data.length === 0) return [];
-        const years = Array.from(new Set((data as any[]).map((d: any) => d.year))).sort() as number[];
-        return years.flatMap(y => {
-            const yearResult = performAnalysis((data || []) as any, y);
-            return yearResult.map((d: any) => ({
-                ...d,
-                clusterTimeSeries: timeSeriesClusters.get(d.country),
-            }));
-        });
-    }, [data, timeSeriesClusters]);
-
-    const { data: sectoralData } = useSectoralData(selectedCountry);
+    // ── Sectoral data ─────────────────────────────────────────────────────────
+    const { data: sectoralData }        = useSectoralData(selectedCountry);
     const { data: compareSectoralData } = useSectoralData(compareCountry);
 
-    const maxYear = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
-    const minYear = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
+    const maxYear  = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
+    const minYear  = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
     const countries = useMemo(() => Array.from(new Set((data || []).map(d => d.country))).sort(), [data]);
 
     return (
         <div className="dashboard-layout">
-            {/* Sidebar */}
+            {/* ── Sidebar ─────────────────────────────────────────────────── */}
             <aside className="dashboard-sidebar">
                 <div className="logo">🇪🇺 EU Energy Dashboard</div>
                 <div className="logo-sub">Visual Analytics of Energy Transition</div>
@@ -119,13 +113,8 @@ const DashboardInner = () => {
                 <div className="sidebar-controls">
                     <label>Year: {year}</label>
                     <Slider
-                        min={minYear}
-                        max={maxYear}
-                        value={year}
-                        onChange={setYear}
-                        step={1}
-                        size="xs"
-                        color="indigo"
+                        min={minYear} max={maxYear} value={year} onChange={setYear}
+                        step={1} size="xs" color="indigo"
                         marks={[
                             { value: minYear, label: String(minYear) },
                             { value: maxYear, label: String(maxYear) },
@@ -140,13 +129,11 @@ const DashboardInner = () => {
                             data={countries}
                             value={selectedCountry}
                             onChange={setSelectedCountry}
-                            searchable
-                            clearable
-                            size="xs"
+                            searchable clearable size="xs"
                             styles={{
-                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                input:    { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
                                 dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
-                                option: { color: '#e2e8f0', '&[dataComboboxSelected]': { background: 'rgba(99,102,241,0.2)' } },
+                                option:   { color: '#e2e8f0' },
                             }}
                         />
                     </div>
@@ -158,14 +145,12 @@ const DashboardInner = () => {
                             data={countries.filter(c => c !== selectedCountry)}
                             value={compareCountry}
                             onChange={setCompareCountry}
-                            searchable
-                            clearable
-                            size="xs"
+                            searchable clearable size="xs"
                             disabled={!selectedCountry}
                             styles={{
-                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                input:    { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
                                 dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
-                                option: { color: '#e2e8f0', '&[dataComboboxSelected]': { background: 'rgba(239,68,68,0.2)' } },
+                                option:   { color: '#e2e8f0' },
                             }}
                         />
                     </div>
@@ -175,23 +160,23 @@ const DashboardInner = () => {
                         <Select
                             data={METRICS.map(m => ({ value: m, label: getMetricLabel(m) }))}
                             value={metric}
-                            onChange={(v) => setMetric(v || METRICS[0])}
+                            onChange={v => setMetric(v || METRICS[0])}
                             size="xs"
                             styles={{
-                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                input:    { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
                                 dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
-                                option: { color: '#e2e8f0', '&[dataComboboxSelected]': { background: 'rgba(99,102,241,0.2)' } },
+                                option:   { color: '#e2e8f0' },
                             }}
                         />
                     </div>
                 </div>
             </aside>
 
-            {/* Main content */}
+            {/* ── Main content ─────────────────────────────────────────────── */}
             <main className="dashboard-main">
-                <LoadingOverlay visible={loading} overlayProps={{ radius: "sm", blur: 2 }} />
+                <LoadingOverlay visible={loading} overlayProps={{ radius: 'sm', blur: 2 }} />
 
-                {/* ============= OVERVIEW ============= */}
+                {/* ════════════════ OVERVIEW ════════════════ */}
                 {view === 'overview' && (
                     <>
                         <div className="page-header">
@@ -199,7 +184,6 @@ const DashboardInner = () => {
                             <p>EU-27 Energy Analytics — Coordinated Multiple Views ({year})</p>
                         </div>
 
-                        {/* KPI Row */}
                         <KPIRow data={analyzedData} sectoralData={sectoralData} year={year} />
 
                         {/* Main coordinated row: Map + Right Panel */}
@@ -207,14 +191,24 @@ const DashboardInner = () => {
                             <div className="chart-card">
                                 <div className="chart-card-header">
                                     <div>
-                                        <div className="chart-card-title">Spatial Clusters</div>
+                                        <div className="chart-card-title">Spatial Overview</div>
                                         <div className="chart-card-subtitle">Click a country to select • Click legend to filter cluster</div>
                                     </div>
+                                    {/* Map-mode toggle is now inline in the Overview */}
+                                    <SegmentedControl
+                                        value={mapMode}
+                                        onChange={setMapMode}
+                                        data={[
+                                            { label: '🎨 Clusters', value: 'cluster' },
+                                            { label: '📊 Metric',   value: 'metric'  },
+                                        ]}
+                                        size="xs"
+                                    />
                                 </div>
                                 <MapChart
                                     data={analyzedData}
                                     metric={metric}
-                                    mode="cluster"
+                                    mode={mapMode as 'metric' | 'cluster'}
                                     clusterNames={clusterNames}
                                 />
                             </div>
@@ -226,16 +220,12 @@ const DashboardInner = () => {
 
                                 {selectedCountry ? (
                                     compareCountry ? (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 12 }}>
                                             <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
                                             <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
                                         </div>
                                     ) : (
-                                        <CountryDetailPanel
-                                            data={analyzedData}
-                                            sectoralData={sectoralData}
-                                            clusterNames={clusterNames}
-                                        />
+                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
                                     )
                                 ) : (
                                     <div className="chart-card" style={{ flex: 1 }}>
@@ -245,7 +235,7 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 2: Emissions pathway */}
+                        {/* Row 2: Sectoral Emissions + Goal Tracking */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
@@ -261,7 +251,6 @@ const DashboardInner = () => {
                             )}
                         </div>
 
-                        {/* Row 2.5: Goal Tracking (if comparing) */}
                         {compareCountry && (
                             <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                                 <div className="chart-card">
@@ -273,87 +262,35 @@ const DashboardInner = () => {
                             </div>
                         )}
 
-                        {/* Row 3: Energy mix */}
+                        {/* Row 3: Energy Mix */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
                             </div>
-                            {compareCountry ? (
-                                <div className="chart-card">
-                                    <EnergyMixChart data={data || []} selectedCountry={compareCountry} />
-                                </div>
-                            ) : (
-                                <div className="chart-card">
-                                    <EnergyMixChart data={data || []} selectedCountry={null} />
-                                </div>
-                            )}
+                            <div className="chart-card">
+                                <EnergyMixChart data={data || []} selectedCountry={compareCountry ?? null} />
+                            </div>
                         </div>
 
-                        {/* Row 4: Cluster Transition Path — always full width so the swimlane has room */}
+                        {/* Row 4: Cluster Transition Path — full width */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
                         </div>
                     </>
                 )}
 
-                {/* ============= MAP EXPLORER ============= */}
-                {view === 'map' && (
-                    <>
-                        <div className="page-header">
-                            <h1>Map Explorer</h1>
-                            <p>Spatial distribution of EU-27 energy indicators — hover to compare, click to select</p>
-                        </div>
-
-                        <div style={{ marginBottom: 12 }}>
-                            <SegmentedControl
-                                value={mapMode}
-                                onChange={setMapMode}
-                                data={[
-                                    { label: '📊 Metric Value', value: 'metric' },
-                                    { label: '🎨 Clusters', value: 'cluster' },
-                                ]}
-                                size="xs"
-                            />
-                        </div>
-
-                        <div className="chart-grid chart-grid-3-1">
-                            <div className="chart-card">
-                                <MapChart
-                                    data={analyzedData}
-                                    metric={metric}
-                                    mode={mapMode as 'metric' | 'cluster'}
-                                    clusterNames={clusterNames}
-                                />
-                            </div>
-                            <div>
-                                {compareCountry && selectedCountry ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
-                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
-                                        <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
-                                    </div>
-                                ) : (
-                                    <CountryDetailPanel
-                                        data={analyzedData}
-                                        sectoralData={sectoralData}
-                                        clusterNames={clusterNames}
-                                    />
-                                )}
-                                <div className="chart-card" style={{ marginTop: 12 }}>
-                                    <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-                {/* ============= CLUSTER ANALYSIS ============= */}
+                {/* ════════════════ CLUSTER ANALYSIS ════════════════ */}
                 {view === 'cluster' && (
                     <>
                         <div className="page-header">
                             <h1>Cluster Analysis</h1>
-                            <p>Energy profile typologies via K-Means clustering with UMAP projection ({year})</p>
+                            <p>
+                                Stable K-Means energy-profile typologies with consensus centroids — cluster identities are
+                                consistent across years ({year}). PCA removed; dendrogram and radar provide the core structural view.
+                            </p>
                         </div>
 
+                        {/* Row 1: Radar + Scatter */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
@@ -363,26 +300,19 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        <div className="chart-grid chart-grid-1" style={{ marginBottom: 16 }}>
-                            <div className="chart-card">
-                                <DendrogramChart data={analyzedData} k={4} />
-                            </div>
-                            <div className="chart-card">
-                                <PCABiplot data={analyzedData} />
-                            </div>
-                        </div>
-
+                        {/* Row 2: Dendrogram (full width) */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <ClusterCompositionList data={analyzedData} clusterNames={clusterNames} />
+                            <DendrogramChart data={analyzedData} k={4} />
                         </div>
 
+                        {/* Row 3: Cluster composition — consolidated */}
                         <div className="chart-card">
-                            <ClusterBoxPlot data={analyzedData} clusterNames={clusterNames} />
+                            <ClusterCompositionList data={analyzedData} clusterNames={clusterNames} />
                         </div>
                     </>
                 )}
 
-                {/* ============= HEATMAP ============= */}
+                {/* ════════════════ HEATMAP ════════════════ */}
                 {view === 'heatmap' && (
                     <>
                         <div className="page-header">
@@ -396,16 +326,12 @@ const DashboardInner = () => {
                             </div>
                             <div>
                                 {compareCountry && selectedCountry ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 12 }}>
                                         <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
                                         <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
                                     </div>
                                 ) : (
-                                    <CountryDetailPanel
-                                        data={analyzedData}
-                                        sectoralData={sectoralData}
-                                        clusterNames={clusterNames}
-                                    />
+                                    <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
                                 )}
                                 <div className="chart-card" style={{ marginTop: 12 }}>
                                     <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
@@ -415,18 +341,19 @@ const DashboardInner = () => {
                     </>
                 )}
 
-                {/* ============= TYPOLOGIES ============= */}
+                {/* ════════════════ TYPOLOGIES ════════════════ */}
                 {view === 'typologies' && (
                     <>
                         <div className="page-header">
                             <h1>Country Typologies</h1>
                             <p>
-                                Structural K-Means on 5 socioeconomic dimensions — and how those typologies
-                                map onto energy clusters for <strong>{year}</strong>
+                                Structural 2×2 typology based on <strong>Economic Development</strong> (GDP PPS) ×{' '}
+                                <strong>Climate Demand</strong> (Heating Degree Days). Each quadrant is theoretically
+                                grounded, non-overlapping, and stable over time.
                             </p>
                         </div>
 
-                        {/* Row 1: Cross-tab (dominant) + Radar profile (compact) */}
+                        {/* Row 1: Radar + Cross-tab */}
                         <div className="chart-grid chart-grid-1-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <TypologyRadarChart data={data} year={year} />
@@ -441,7 +368,7 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 2: Socioeconomic factor vs energy outcome scatter — full width */}
+                        {/* Row 2: Socio-energy scatter — full width */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <SocioEnergyScatter
                                 typoData={data || []}
@@ -453,25 +380,42 @@ const DashboardInner = () => {
                     </>
                 )}
 
-                {/* ============= TIME SERIES ============= */}
+                {/* ════════════════ TIME SERIES ════════════════ */}
                 {view === 'timeSeries' && (
                     <>
                         <div className="page-header">
                             <h1>Temporal Evolution</h1>
-                            <p>Energy indicator trends and cluster transition dynamics (2010-2023)</p>
+                            <p>Energy indicator trends, cluster-average trajectories, and cluster stability dynamics (2010–2023)</p>
                         </div>
 
-                        <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <EnergyTrendsChart data={data || []} selectedCountry={selectedCountry} metric={metric} />
+                        {/* Row 1: Trend chart + Stability chart side by side */}
+                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                            <div className="chart-card">
+                                <EnergyTrendsChart
+                                    data={data || []}
+                                    selectedCountry={selectedCountry}
+                                    metric={metric}
+                                    allYearsData={allYearsClusteredData}
+                                    clusterNames={clusterNames}
+                                />
+                            </div>
+                            <div className="chart-card">
+                                <ClusterStabilityChart
+                                    data={allYearsClusteredData}
+                                    clusterNames={clusterNames}
+                                    selectedCountry={selectedCountry}
+                                />
+                            </div>
                         </div>
 
+                        {/* Row 2: Transition flow — full width */}
                         <div className="chart-card">
                             <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
                         </div>
                     </>
                 )}
 
-                {/* ============= METHODOLOGY ============= */}
+                {/* ════════════════ METHODOLOGY ════════════════ */}
                 {view === 'methodology' && (
                     <>
                         <div className="page-header">
@@ -486,12 +430,12 @@ const DashboardInner = () => {
     );
 };
 
-// KPI Row component using real data
+// ──────────────────────────────────────────────────────────────────────────────
 const KPIRow = ({ data, sectoralData, year }: { data: ClusteredData[]; sectoralData: any[]; year: number }) => {
     const latestSectoral = sectoralData.find(d => d.year === year);
-    const avgRenewable = data.length > 0
+    const avgRenewable   = data.length > 0
         ? data.reduce((acc, d) => acc + (Number(d.renewable_share) || 0), 0) / data.length : 0;
-    const numClusters = new Set(data.map(d => d.cluster)).size;
+    const numClusters    = new Set(data.map(d => d.cluster)).size;
 
     return (
         <div className="kpi-row">
@@ -510,18 +454,16 @@ const KPIRow = ({ data, sectoralData, year }: { data: ClusteredData[]; sectoralD
                 </div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Clusters ({year})</div>
+                <div className="kpi-label">Energy Clusters ({year})</div>
                 <div className="kpi-value neutral">{numClusters}</div>
             </div>
         </div>
     );
 };
 
-// Wrapper with InteractionProvider
-export const Dashboard = () => {
-    return (
-        <InteractionProvider>
-            <DashboardInner />
-        </InteractionProvider>
-    );
-};
+// ──────────────────────────────────────────────────────────────────────────────
+export const Dashboard = () => (
+    <InteractionProvider>
+        <DashboardInner />
+    </InteractionProvider>
+);

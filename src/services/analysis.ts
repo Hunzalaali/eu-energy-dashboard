@@ -317,6 +317,119 @@ export const performTimeSeriesAnalysis = (data: EnergyData[], k: number = 4): Ma
     }
 };
 
+// ---------------------------------------------------------------------------
+// STABLE CLUSTERING
+// ---------------------------------------------------------------------------
+
+/**
+ * Build stable cluster centroids from the full time-series dataset.
+ *
+ * Instead of clustering each year independently (which leads to label
+ * instability due to random K-Means initialisation), we cluster one
+ * *average* feature vector per country computed across all available years.
+ * The resulting centroids are fixed and reused for every year.
+ *
+ * Returns centroids sorted ascending by renewable_share so that cluster 0
+ * is always the least-renewable group and cluster k-1 is always the most.
+ */
+export const buildStableCentroids = (data: EnergyData[], k: number = 4): number[][] => {
+    const countries = Array.from(new Set(data.map(d => d.country)));
+
+    // One average feature vector per country across all years
+    const countryVectors: number[][] = [];
+    countries.forEach(country => {
+        const rows = data.filter(d => d.country === country);
+        if (rows.length === 0) return;
+        const vector = FEATURES.map(f => {
+            const vals = rows.map(d => (typeof d[f] === 'number' ? (d[f] as number) : 0));
+            return vals.reduce((a, b) => a + b, 0) / vals.length;
+        });
+        countryVectors.push(vector);
+    });
+
+    if (countryVectors.length < k) return [];
+
+    // Global standardisation (all years, all countries)
+    const allDataset = data.map(d => FEATURES.map(f => (typeof d[f] === 'number' ? (d[f] as number) : 0)));
+    const gMeans = FEATURES.map((_, i) => allDataset.reduce((a, r) => a + r[i], 0) / allDataset.length);
+    const gStds = FEATURES.map((_, i) => {
+        const m = gMeans[i];
+        return Math.sqrt(allDataset.reduce((a, r) => a + Math.pow(r[i] - m, 2), 0) / allDataset.length) || 1;
+    });
+
+    const scaled = countryVectors.map(v => v.map((val, i) => (val - gMeans[i]) / gStds[i]));
+
+    // Consensus K-Means — 20 restarts, keep best inertia
+    const dist = (a: number[], b: number[]) => Math.sqrt(a.reduce((s, v, i) => s + Math.pow(v - b[i], 2), 0));
+    let bestCentroids: number[][] = [];
+    let bestInertia = Infinity;
+
+    for (let run = 0; run < 20; run++) {
+        const res = kmeans(scaled, k, { initialization: 'kmeans++' });
+        let inertia = 0;
+        res.clusters.forEach((ci, i) => { inertia += Math.pow(dist(scaled[i], res.centroids[ci]), 2); });
+        if (inertia < bestInertia) { bestInertia = inertia; bestCentroids = res.centroids; }
+    }
+
+    // Sort by renewable_share ascending → deterministic label ordering
+    const ri = FEATURES.indexOf('renewable_share');
+    return [...bestCentroids].sort((a, b) => (a[ri] ?? 0) - (b[ri] ?? 0));
+};
+
+/**
+ * Perform stable energy-cluster analysis for a single year.
+ *
+ * Uses pre-built stable centroids (from buildStableCentroids) so that
+ * cluster identities are consistent across years — a country only changes
+ * cluster when its actual energy profile drifts, not due to random seed
+ * differences.
+ */
+export const performStableAnalysis = (
+    data: EnergyData[],
+    year: number,
+    k: number = 4,
+    stableCentroids: number[][]
+): ClusteredData[] => {
+    const yearData = data.filter(d => d.year === year);
+    if (yearData.length === 0 || stableCentroids.length === 0) return [];
+
+    // Same global standardisation as buildStableCentroids
+    const allDataset = data.map(d => FEATURES.map(f => (typeof d[f] === 'number' ? (d[f] as number) : 0)));
+    const gMeans = FEATURES.map((_, i) => allDataset.reduce((a, r) => a + r[i], 0) / allDataset.length);
+    const gStds = FEATURES.map((_, i) => {
+        const m = gMeans[i];
+        return Math.sqrt(allDataset.reduce((a, r) => a + Math.pow(r[i] - m, 2), 0) / allDataset.length) || 1;
+    });
+
+    const scaledYear = yearData.map(d =>
+        FEATURES.map((f, i) => (((typeof d[f] === 'number' ? (d[f] as number) : 0)) - gMeans[i]) / gStds[i])
+    );
+
+    // Assign to nearest stable centroid
+    const dist = (a: number[], b: number[]) => Math.sqrt(a.reduce((s, v, i) => s + Math.pow(v - b[i], 2), 0));
+    const clusters = scaledYear.map(pt => {
+        let bestC = 0, bestD = Infinity;
+        stableCentroids.forEach((c, idx) => { const d = dist(pt, c); if (d < bestD) { bestD = d; bestC = idx; } });
+        return bestC;
+    });
+
+    // UMAP for scatter-plot visualisation only
+    let umapResults: number[][] = scaledYear.map(() => [0, 0]);
+    try {
+        const umap = new UMAP({ nComponents: 2, nEpochs: 400, nNeighbors: Math.min(15, scaledYear.length - 1) });
+        umapResults = umap.fit(scaledYear);
+    } catch (e) { console.error('UMAP failed', e); }
+
+    return yearData.map((d, i) => ({
+        ...d,
+        cluster: clusters[i],
+        umapX: umapResults[i]?.[0] ?? 0,
+        umapY: umapResults[i]?.[1] ?? 0,
+        tsneX: 0,
+        tsneY: 0,
+    }));
+};
+
 // --- Methodology Helpers ---
 
 const euclideanDistance = (a: number[], b: number[]) => {
