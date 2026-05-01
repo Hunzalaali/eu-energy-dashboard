@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { type ClusteredData } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
+import { useInteraction } from '../context/InteractionContext';
 
 interface ClusterStabilityChartProps {
     data: ClusteredData[];           // all-years stable clustered data
@@ -26,6 +27,7 @@ export const ClusterStabilityChart = ({
     clusterNames,
     selectedCountry,
 }: ClusterStabilityChartProps) => {
+    const { selectedCluster, toggleCluster } = useInteraction();
     const { stabilityBars, transitionLine, totalTransitions } = useMemo(() => {
         if (!data || data.length === 0) return { stabilityBars: [], transitionLine: [], totalTransitions: 0 };
 
@@ -105,6 +107,9 @@ export const ClusterStabilityChart = ({
                             dataKey={clusterNames?.[c] ?? `C${c}`}
                             stackId="a"
                             fill={getClusterColorById(c, clusterNames)}
+                            opacity={selectedCluster !== null && selectedCluster !== c ? 0.25 : 1}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => toggleCluster(c)}
                         />
                     ))}
                     <Bar dataKey="Switched" stackId="a" fill="#f1f3f5" stroke="#adb5bd" strokeWidth={1} />

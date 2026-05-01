@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush } from 'recharts';
 import { Paper, Title, Text } from '@mantine/core';
 import { type EnergyData, type ClusteredData, getMetricLabel } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
@@ -11,10 +11,12 @@ interface EnergyTrendsChartProps {
     /** Optional: all-years clustered data for cluster-average sparklines */
     allYearsData?: ClusteredData[];
     clusterNames?: Record<number, string>;
+    /** Called when user brushes a year range — syncs the map year */
+    onYearChange?: (year: number) => void;
 }
 
 export const EnergyTrendsChart = ({
-    data, selectedCountry, metric, allYearsData, clusterNames,
+    data, selectedCountry, metric, allYearsData, clusterNames, onYearChange,
 }: EnergyTrendsChartProps) => {
 
     const chartData = useMemo(() => {
@@ -100,6 +102,23 @@ export const EnergyTrendsChart = ({
                         <Line
                             type="monotone" dataKey={selectedCountry}
                             stroke="#228be6" strokeWidth={3} activeDot={{ r: 7 }}
+                        />
+                    )}
+
+                    {/* Year brush — drag to snap map to mid-point year */}
+                    {onYearChange && (
+                        <Brush
+                            dataKey="year"
+                            height={18}
+                            stroke="#4c6ef5"
+                            fill="rgba(76,110,245,0.08)"
+                            travellerWidth={6}
+                            onChange={({ startIndex, endIndex }: { startIndex?: number; endIndex?: number }) => {
+                                if (startIndex == null || endIndex == null) return;
+                                const mid = Math.round((startIndex + endIndex) / 2);
+                                const midYear = chartData[mid]?.year;
+                                if (midYear) onYearChange(midYear);
+                            }}
                         />
                     )}
                 </LineChart>

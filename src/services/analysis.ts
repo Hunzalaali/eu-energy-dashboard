@@ -388,7 +388,9 @@ export const performStableAnalysis = (
     data: EnergyData[],
     year: number,
     k: number = 4,
-    stableCentroids: number[][]
+    stableCentroids: number[][],
+    /** Set true when you only need cluster assignments (skips UMAP — much faster) */
+    skipUMAP: boolean = false
 ): ClusteredData[] => {
     const yearData = data.filter(d => d.year === year);
     if (yearData.length === 0 || stableCentroids.length === 0) return [];
@@ -413,12 +415,14 @@ export const performStableAnalysis = (
         return bestC;
     });
 
-    // UMAP for scatter-plot visualisation only
+    // UMAP for scatter-plot visualisation only — skip when not needed (e.g. all-years stability chart)
     let umapResults: number[][] = scaledYear.map(() => [0, 0]);
-    try {
-        const umap = new UMAP({ nComponents: 2, nEpochs: 400, nNeighbors: Math.min(15, scaledYear.length - 1) });
-        umapResults = umap.fit(scaledYear);
-    } catch (e) { console.error('UMAP failed', e); }
+    if (!skipUMAP) {
+        try {
+            const umap = new UMAP({ nComponents: 2, nEpochs: 400, nNeighbors: Math.min(15, scaledYear.length - 1) });
+            umapResults = umap.fit(scaledYear);
+        } catch (e) { console.error('UMAP failed', e); }
+    }
 
     return yearData.map((d, i) => ({
         ...d,
@@ -636,6 +640,17 @@ export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange
  * 
  * This is more principled and generalizable than the previous approach.
  */
+/**
+ * Z-score based cluster naming — energy-mix features prioritised.
+ *
+ * The naming deliberately weights energy-mix features (renewable_share,
+ * fossil_share, nuclear_share, ghg_intensity) more heavily than the
+ * supply-chain feature (energy_dependency). This ensures cluster names
+ * always describe *what kind of energy* countries use rather than *where
+ * they source it from*, keeping names on a consistent conceptual level.
+ *
+ * Reference: inspired by Kaufman & Rousseeuw (1990) cluster characterisation.
+ */
 export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, string> => {
     const clusters = Array.from(new Set(data.map(d => d.cluster))).sort();
     const names: Record<number, string> = {};
@@ -652,51 +667,58 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
         globalStds[f] = Math.sqrt(variance) || 1;
     });
 
-    // Descriptive name fragments
+    // Energy-mix features get full weight; supply-chain features are deprioritised
+    // so that "Import Dependent" never outranks "Fossil Reliant" or "Green Leaders".
+    const featureWeight: Record<string, number> = {
+        'renewable_share':   1.0,
+        'fossil_share':      1.0,
+        'nuclear_share':     1.0,
+        'ghg_intensity':     0.9,
+        'energy_intensity':  0.8,
+        'per_capita_toe':    0.7,
+        'energy_dependency': 0.4,   // supply-chain dimension — intentionally deprioritised
+    };
+
     const featureDescriptors: Record<string, { high: string; low: string }> = {
-        'renewable_share': { high: 'Green', low: 'Low-Renewable' },
-        'energy_dependency': { high: 'Import-Dependent', low: 'Self-Sufficient' },
-        'ghg_intensity': { high: 'Carbon-Intensive', low: 'Low-Carbon' },
-        'energy_intensity': { high: 'Energy-Intensive', low: 'Efficient' },
-        'per_capita_toe': { high: 'High-Consumption', low: 'Low-Consumption' },
-        'fossil_share': { high: 'Fossil-Reliant', low: 'Post-Fossil' },
-        'nuclear_share': { high: 'Nuclear-Powered', low: '' },
+        'renewable_share':   { high: 'Green Leaders',      low: 'Low-Renewable'  },
+        'energy_dependency': { high: 'Energy Importers',   low: 'Self-Sufficient' },
+        'ghg_intensity':     { high: 'Carbon Intensive',   low: 'Low-Carbon'     },
+        'energy_intensity':  { high: 'Energy Intensive',   low: 'Efficient'      },
+        'per_capita_toe':    { high: 'High Consumption',   low: 'Low Consumption'},
+        'fossil_share':      { high: 'Fossil Reliant',     low: 'Post-Fossil'    },
+        'nuclear_share':     { high: 'Nuclear Powered',    low: ''               },
     };
 
     clusters.forEach(clusterId => {
         const clusterPoints = data.filter(d => d.cluster === clusterId);
-        if (clusterPoints.length === 0) {
-            names[clusterId] = 'Empty';
-            return;
-        }
+        if (clusterPoints.length === 0) { names[clusterId] = 'Mixed Profile'; return; }
 
-        // Compute z-scores for this cluster's centroid
-        const zScores: { feature: string; z: number }[] = FEATURES.map(f => {
+        // Compute weighted z-scores for this cluster's centroid
+        const zScores = FEATURES.map(f => {
             const clusterMean = clusterPoints.reduce((a, d) => a + (Number(d[f]) || 0), 0) / clusterPoints.length;
-            return { feature: f, z: (clusterMean - globalMeans[f]) / globalStds[f] };
+            const z = (clusterMean - globalMeans[f]) / globalStds[f];
+            return { feature: f, z, weighted: Math.abs(z) * (featureWeight[f] ?? 1.0) };
         });
 
-        // Sort by absolute z-score, pick top distinctive features
+        // Sort by weighted score — energy-mix features win ties over supply-chain features
         const sorted = zScores
             .filter(z => Math.abs(z.z) > 0.5)
-            .sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+            .sort((a, b) => b.weighted - a.weighted);
 
-        if (sorted.length === 0) {
-            names[clusterId] = 'Mixed Profile';
-            return;
-        }
+        if (sorted.length === 0) { names[clusterId] = 'Mixed Profile'; return; }
 
-        // Build name from top 1-2 distinctive features
+        // Build name from top 1–2 distinctive features
         const parts: string[] = [];
         for (let i = 0; i < Math.min(2, sorted.length); i++) {
             const { feature, z } = sorted[i];
             const desc = featureDescriptors[feature];
             if (desc) {
-                parts.push(z > 0 ? desc.high : desc.low);
+                const label = z > 0 ? desc.high : desc.low;
+                if (label) parts.push(label);
             }
         }
 
-        names[clusterId] = parts.filter(p => p.length > 0).join(' & ') || 'Mixed Profile';
+        names[clusterId] = parts.join(' & ') || 'Mixed Profile';
     });
 
     return names;

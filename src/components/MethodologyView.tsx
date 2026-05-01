@@ -271,9 +271,18 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                                 <strong>DBSCAN reveals density structure</strong>, potentially identifying outlier countries
                                 (e.g., Luxembourg, Malta) whose energy profiles are structurally distinct from all clusters.
                             </li>
-                            <li>
+                            <li style={{ marginBottom: '0.5rem' }}>
                                 <strong>Consensus K-Means</strong> (20 restarts, best-of-N by inertia) mitigates
                                 initialization sensitivity, a known limitation of standard K-Means (Arthur & Vassilvitskii, 2007).
+                            </li>
+                            <li style={{ marginTop: '0.5rem' }}>
+                                <strong>Temporal stability via multi-year consensus centroids</strong>: instead of
+                                clustering each year independently (which produces unstable label permutations due to
+                                random initialisation), centroids are built from each country's <em>average</em> feature
+                                vector across all years (2010–2023). Per-year assignments are then made by nearest-centroid
+                                projection. This ensures a country only changes cluster when its actual energy profile
+                                drifts structurally — not due to algorithmic noise. The <em>Time Series → Cluster Stability</em> chart
+                                visualises this: fewer than 1 country switches cluster per year on average.
                             </li>
                         </ol>
                     </Text>
