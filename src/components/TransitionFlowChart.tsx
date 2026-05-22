@@ -48,8 +48,8 @@ const AggregateView = ({ data, clusterNames }: { data: ClusteredData[]; clusterN
         <Paper shadow="xs" p="md" withBorder h="100%">
             <Title order={4} mb={4}>Cluster Distribution Over Time</Title>
             <Text size="xs" c="dimmed" mb="md">
-                How many EU countries belong to each energy cluster per year — stacked area shows compositional shifts.
-                Select a country in the sidebar to see its personal cluster trajectory.
+                This chart shows how the number of EU countries in each energy cluster has changed from 2010 to 2023.
+                A growing band means more countries moved into that cluster. Select a country in the sidebar to trace its cluster trajectory.
             </Text>
             <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -133,8 +133,8 @@ const SwimlaneView = ({
                 <div>
                     <Title order={4}>Cluster Transition Path: {selectedCountry}</Title>
                     <Text size="xs" c="dimmed">
-                        Swimlane showing which energy cluster {selectedCountry} belonged to each year.
-                        Curved segments = cluster transitions. (Hulstein et al., 2022)
+                        Each row is an energy cluster. The line traces which cluster {selectedCountry} belonged to each year.
+                        A curve means the country moved to a different energy cluster that year.
                     </Text>
                 </div>
                 <Badge color={transitions === 0 ? 'teal' : transitions <= 2 ? 'orange' : 'red'} variant="light" size="sm">

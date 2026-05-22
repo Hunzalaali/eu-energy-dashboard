@@ -67,7 +67,6 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
                     const pct = percentiles[f];
                     const Icon = FEATURE_ICONS[f] || IconBolt;
 
-                    console.log('featue ', f, val)
 
                     return (
                         <div key={f}>

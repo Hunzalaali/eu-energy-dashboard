@@ -196,8 +196,8 @@ const DashboardInner = () => {
                 {view === 'overview' && (
                     <>
                         <div className="page-header">
-                            <h1>Overview Dashboard</h1>
-                            <p>EU-27 Energy Analytics — Coordinated Multiple Views ({year})</p>
+                            <h1>EU Energy Dashboard</h1>
+                            <p>Explore how 27 European countries produce and consume energy and how that has changed from 2010 to {year}</p>
                         </div>
 
                         <KPIRow data={analyzedData} sectoralData={sectoralData} year={year} stabilityStats={stabilityStats} />
@@ -251,7 +251,12 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 2: Sectoral Emissions + Goal Tracking */}
+                        {/* Row 2: Cluster Transition Path — full width */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
+                        </div>
+
+                        {/* Row 3: Sectoral Emissions + Goal Tracking */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
@@ -278,7 +283,7 @@ const DashboardInner = () => {
                             </div>
                         )}
 
-                        {/* Row 3: Energy Mix */}
+                        {/* Row 4: Energy Mix */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
@@ -288,10 +293,7 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 4: Cluster Transition Path — full width */}
-                        <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
-                        </div>
+                        
                     </>
                 )}
 
@@ -299,10 +301,9 @@ const DashboardInner = () => {
                 {view === 'cluster' && (
                     <>
                         <div className="page-header">
-                            <h1>Cluster Analysis</h1>
+                            <h1>Energy Groups</h1>
                             <p>
-                                Stable K-Means energy-profile typologies with consensus centroids — cluster identities are
-                                consistent across years ({year}). PCA removed; dendrogram and radar provide the core structural view.
+                                Countries with similar energy profiles are placed into groups. Explore what makes each group unique ({year}).
                             </p>
                         </div>
 
@@ -334,11 +335,9 @@ const DashboardInner = () => {
                 {view === 'typologies' && (
                     <>
                         <div className="page-header">
-                            <h1>Country Typologies</h1>
+                            <h1>Country Types</h1>
                             <p>
-                                Structural 2×2 typology based on <strong>Economic Development</strong> (GDP PPS) ×{' '}
-                                <strong>Climate Demand</strong> (Heating Degree Days). Each quadrant is theoretically
-                                grounded, non-overlapping, and stable over time.
+                                Countries are classified by their economic wealth and climate conditions. See how these factors influence their energy choices.
                             </p>
                         </div>
 
@@ -383,8 +382,8 @@ const DashboardInner = () => {
                 {view === 'timeSeries' && (
                     <>
                         <div className="page-header">
-                            <h1>Temporal Evolution</h1>
-                            <p>Energy indicator trends, cluster-average trajectories, and cluster stability dynamics (2010–2023)</p>
+                            <h1>Trends Over Time</h1>
+                            <p>How has energy use, renewable growth, and country group membership changed from 2010 to 2023?</p>
                         </div>
 
                                                 {/* Row 1: Trend chart + Stability chart side by side */}
@@ -419,8 +418,8 @@ const DashboardInner = () => {
                 {view === 'methodology' && (
                     <>
                         <div className="page-header">
-                            <h1>Methodology & Validation</h1>
-                            <p>Systematic evaluation of clustering algorithms, parameter selection, and validation metrics</p>
+                            <h1>How It Works</h1>
+                            <p>Behind the scenes: how countries are grouped, which algorithm is used, and how we validate the results</p>
                         </div>
                         <MethodologyView data={data} year={year} />
                     </>
@@ -446,26 +445,27 @@ const KPIRow = ({ data, sectoralData, year, stabilityStats }: {
         <div className="kpi-row">
             <div className="kpi-card">
                 <div className="kpi-label">Countries Analyzed</div>
-                <div className="kpi-value neutral">{data.length}</div>
+                <div className="kpi-value neutral" title="Number of EU Member States included in this year's data">{data.length}</div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Avg Renewable Share</div>
-                <div className="kpi-value positive">{avgRenewable.toFixed(1)}%</div>
+                <div className="kpi-label">Avg. Renewable Share</div>
+                <div className="kpi-value positive" title="What percentage of energy comes from renewables (solar, wind, hydro) on average across all EU countries">{avgRenewable.toFixed(1)}%</div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Emissions vs 2000</div>
-                <div className={`kpi-value ${latestSectoral?.emissionsVs2000 < 0 ? 'positive' : 'negative'}`}>
+                <div className="kpi-label">Emissions vs. Year 2000</div>
+                <div className={`kpi-value ${latestSectoral?.emissionsVs2000 < 0 ? 'positive' : 'negative'}`}
+                    title="How much CO₂ emissions have changed compared to the year 2000. Negative = good progress.">
                     {latestSectoral ? `${latestSectoral.emissionsVs2000.toFixed(1)}%` : '—'}
                 </div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Energy Clusters ({year})</div>
-                <div className="kpi-value neutral">{numClusters}</div>
+                <div className="kpi-label">Energy Groups ({year})</div>
+                <div className="kpi-value neutral" title="How many distinct energy groups (clusters) exist this year based on countries' energy profiles">{numClusters}</div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Cluster Switches (2010–2023)</div>
+                <div className="kpi-label">Group Changes (2010–2023)</div>
                 <div className={`kpi-value ${stabilityStats.total <= 20 ? 'positive' : 'negative'}`}
-                    title={`avg ${stabilityStats.avgPerYear} switches/yr`}>
+                    title={`Total number of times a country moved to a different energy group across all years. Fewer changes = more stable long-term strategies. Average: ${stabilityStats.avgPerYear} per year.`}>
                     {stabilityStats.total} <span style={{ fontSize: '0.55em', opacity: 0.7 }}>({stabilityStats.avgPerYear}/yr)</span>
                 </div>
             </div>

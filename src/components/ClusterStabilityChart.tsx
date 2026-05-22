@@ -82,19 +82,19 @@ export const ClusterStabilityChart = ({
         <Paper shadow="xs" p="md" withBorder h="100%">
             <Group justify="space-between" mb="xs" align="flex-start">
                 <div>
-                    <Title order={4}>Cluster Stability Over Time</Title>
+                    <Title order={4}>How Often Do Countries Change Clusters?</Title>
                     <Text size="xs" c="dimmed" mt={2}>
-                        Countries remaining in the same cluster year-on-year vs those that switched.
-                        Lower switches = more stable typology.
+                        Countries that stay in the same energy cluster year after year vs. those that shifted.
+                        Fewer changes = more consistent, long-term energy strategy.
                     </Text>
                 </div>
                 <Badge color="teal" variant="light" size="sm">
-                    avg {avgTransitions} switches/yr
+                    avg {avgTransitions} cluster changes/yr
                 </Badge>
             </Group>
 
             {/* Stacked bar: stable per cluster + transitions */}
-            <Text size="xs" fw={600} mb={4} c="dimmed">Country-cluster membership by year</Text>
+            <Text size="xs" fw={600} mb={4} c="dimmed">Which energy cluster each country belongs to, per year</Text>
             <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={stabilityBars} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                     <XAxis dataKey="year" tick={{ fontSize: 10 }} />
@@ -117,7 +117,7 @@ export const ClusterStabilityChart = ({
             </ResponsiveContainer>
 
             {/* Line: transitions per year */}
-            <Text size="xs" fw={600} mt="sm" mb={4} c="dimmed">Annual cluster transitions (lower = more stable)</Text>
+            <Text size="xs" fw={600} mt="sm" mb={4} c="dimmed">How many countries changed energy cluster each year (lower = more stable)</Text>
             <ResponsiveContainer width="100%" height={120}>
                 <LineChart data={transitionLine} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />

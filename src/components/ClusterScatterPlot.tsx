@@ -29,12 +29,13 @@ export const ClusterScatterPlot = ({ data, method = 'umap', clusterNames }: Clus
 
     return (
         <Paper shadow="xs" p="md" withBorder h="100%">
-            <Group justify="space-between" mb="md">
-                <Title order={4}>Cluster Projection ({method.toUpperCase()})</Title>
-                <Text size="xs" c="dimmed">
-                    {hoveredCountry || selectedCountry ? `🔗 ${hoveredCountry || selectedCountry}` : `${data.length} countries`}
-                </Text>
+            <Group justify="space-between" mb={4}>
+                <Title order={4}>Countries Energy Map</Title>
             </Group>
+            <Text size="xs" c="dimmed" mb="md">
+                Each dot is a country. Countries with similar energy profiles are placed closer together.
+                {(hoveredCountry || selectedCountry) ? ` Highlighting: ${hoveredCountry || selectedCountry}.` : ` Click a dot to select a country.`}
+            </Text>
 
             <ResponsiveContainer width="100%" height={300}>
                 <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
@@ -48,8 +49,8 @@ export const ClusterScatterPlot = ({ data, method = 'umap', clusterNames }: Clus
                                 const d = payload[0].payload;
                                 return (
                                     <Paper p="xs" shadow="xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
-                                        <Text fw={700} size="sm">{d.country}</Text>
-                                        <Text size="xs">Cluster {d.cluster}</Text>
+                                        <Text fw={700} size="sm" c="dark">{d.country}</Text>
+                                        <Text size="xs" c="dimmed">Cluster: {clusterNames?.[d.cluster] ?? `Cluster ${d.cluster}`}</Text>
                                     </Paper>
                                 );
                             }

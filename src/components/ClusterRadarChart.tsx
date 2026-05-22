@@ -54,9 +54,11 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
 
     return (
         <Paper shadow="xs" p="md" withBorder h="100%">
-            <Title order={4} mb={4}>Cluster Profiles</Title>
+            <Title order={4} mb={4}>Energy Fingerprints by Cluster</Title>
             <Text size="xs" c="dimmed" mb="sm">
-                {(selectedCountry || hoveredCountry) ? `Overlay: ${selectedCountry || hoveredCountry}` : 'Normalized feature fingerprints'}
+                {(selectedCountry || hoveredCountry)
+                    ? `Comparing ${selectedCountry || hoveredCountry} (dashed red) against each cluster's average shape`
+                    : 'Each shape shows the average energy mix of a cluster. A wider shape = higher values across all indicators.'}
             </Text>
             <ResponsiveContainer width="100%" height={280}>
                 <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>

@@ -97,7 +97,7 @@ export const performAnalysis = (data: EnergyData[], year: number, k: number = 4)
     let bestInertia = Infinity;
 
     for (let run = 0; run < 15; run++) {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++', seed: 42 + run });
         let inertia = 0;
         result.clusters.forEach((ci, i) => {
             inertia += Math.pow(euclidDist(scaledData[i], result.centroids[ci]), 2);
@@ -237,7 +237,7 @@ export const reclusterData = (data: ClusteredData[], features: string[], k: numb
     );
 
     try {
-        const result = kmeans(dataset, k, { initialization: 'kmeans++' });
+        const result = kmeans(dataset, k, { initialization: 'kmeans++', seed: 42 });
 
         return data.map((d, i) => ({
             ...d,
@@ -303,7 +303,7 @@ export const performTimeSeriesAnalysis = (data: EnergyData[], k: number = 4): Ma
 
     // 4. K-Means
     try {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++', seed: 42 });
 
         // 5. Map back to country
         const clusterMap = new Map<string, number>();
@@ -365,7 +365,7 @@ export const buildStableCentroids = (data: EnergyData[], k: number = 4): number[
     let bestInertia = Infinity;
 
     for (let run = 0; run < 20; run++) {
-        const res = kmeans(scaled, k, { initialization: 'kmeans++' });
+        const res = kmeans(scaled, k, { initialization: 'kmeans++', seed: 42 + run });
         let inertia = 0;
         res.clusters.forEach((ci, i) => { inertia += Math.pow(dist(scaled[i], res.centroids[ci]), 2); });
         if (inertia < bestInertia) { bestInertia = inertia; bestCentroids = res.centroids; }
@@ -608,7 +608,7 @@ export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange
     );
 
     return kRange.map(k => {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++', seed: 42 });
 
         // Inertia (WCSS)
         let inertia = 0;
@@ -836,7 +836,7 @@ export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 
     // 1. K-Means (with consensus — run 20 times, pick best by inertia)
     let bestKMeans = { clusters: [] as number[], inertia: Infinity, centroids: [] as number[][] };
     for (let run = 0; run < 20; run++) {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++' });
+        const result = kmeans(scaledData, k, { initialization: 'kmeans++', seed: 42 + run });
         let inertia = 0;
         result.clusters.forEach((ci, i) => {
             inertia += Math.pow(euclideanDistance(scaledData[i], result.centroids[ci]), 2);
