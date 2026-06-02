@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Paper, Title, Text, Box } from '@mantine/core';
+import { Paper, Title, Text, Box, Tooltip, Badge } from '@mantine/core';
 import type { EnergyData } from '../data/useEnergyData';
 import type { ClusteredData } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
@@ -32,7 +32,20 @@ interface Props {
 }
 
 export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames, year }: Props) => {
-    const { selectedCluster, toggleCluster } = useInteraction();
+    const { selectedCluster, toggleCluster, selectedCountry } = useInteraction();
+
+    // Find selected country's data for active year
+    const selectedCountryData = useMemo(() => {
+        if (!selectedCountry) return null;
+        return typoData.find(d => d.country === selectedCountry && d.year === year) || null;
+    }, [typoData, selectedCountry, year]);
+
+    // Find which energy cluster selected country belongs to
+    const selectedCountryCluster = useMemo(() => {
+        if (!selectedCountry) return null;
+        const eData = energyData.find(d => d.country === selectedCountry);
+        return eData !== undefined ? eData.cluster : null;
+    }, [energyData, selectedCountry]);
 
     const { clusterIds, profile, ranges } = useMemo(() => {
         const ids = Array.from(new Set(energyData.map(d => d.cluster))).sort();
@@ -71,7 +84,10 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
         const ranges: Record<string, { min: number; max: number }> = {};
         SECONDARY_VARS.forEach(({ key }) => {
             const vals = ids.map(cid => profile[cid][key]);
-            ranges[key] = { min: Math.min(...vals), max: Math.max(...vals) };
+            // Avoid divide by zero
+            const min = Math.min(...vals);
+            const max = Math.max(...vals);
+            ranges[key] = { min, max };
         });
 
         return { clusterIds: ids, profile, ranges };
@@ -79,10 +95,11 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
 
     if (clusterIds.length === 0) return null;
 
-    const norm = (cid: number, key: string) => {
+    const norm = (cid: number, key: string, customVal?: number) => {
         const { min, max } = ranges[key];
+        const val = customVal !== undefined ? customVal : (profile[cid][key] ?? 0);
         if (max === min) return 0.5;
-        return (profile[cid][key] - min) / (max - min);
+        return (val - min) / (max - min);
     };
 
     return (
@@ -141,23 +158,61 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                                     const color = getClusterColorById(cid, energyClusterNames);
                                     const pct = Math.round(norm(cid, key) * 100);
                                     const dimmed = selectedCluster !== null && selectedCluster !== cid;
+                                    
+                                    const hasSelectedCountry = selectedCountryCluster === cid;
+                                    let selectedCountryPct = 0;
+                                    let selectedCountryValueStr = '';
+                                    if (hasSelectedCountry && selectedCountryData) {
+                                        const val = Number(selectedCountryData[key as keyof EnergyData]);
+                                        if (!isNaN(val)) {
+                                            selectedCountryPct = Math.min(100, Math.max(0, Math.round(norm(cid, key, val) * 100)));
+                                            selectedCountryValueStr = format(val);
+                                        }
+                                    }
+
                                     return (
                                         <td key={cid} style={{
                                             padding: '6px 12px', textAlign: 'center',
                                             opacity: dimmed ? 0.3 : 1, transition: 'opacity 0.2s',
                                         }}>
-                                            <Text size="xs" fw={700} mb={4} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                                {format(profile[cid]?.[key] ?? 0)}
-                                            </Text>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                                <Text size="xs" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                                    {format(profile[cid]?.[key] ?? 0)}
+                                                </Text>
+                                                {hasSelectedCountry && selectedCountryData && (
+                                                    <Tooltip label={`${selectedCountry}: ${selectedCountryValueStr}`}>
+                                                        <Badge size="xs" color="orange" variant="filled" style={{ fontSize: 9, padding: '0 4px', height: 14 }}>
+                                                            {selectedCountry}
+                                                        </Badge>
+                                                    </Tooltip>
+                                                )}
+                                            </div>
                                             <div style={{
-                                                width: 64, height: 5, borderRadius: 3,
-                                                background: 'rgba(255,255,255,0.08)', margin: '0 auto', overflow: 'hidden',
+                                                width: 64, height: 8, borderRadius: 3,
+                                                background: 'rgba(255,255,255,0.08)', margin: '4px auto 0 auto', overflow: 'visible',
+                                                position: 'relative',
                                             }}>
                                                 <div style={{
                                                     width: `${pct}%`, height: '100%',
                                                     background: color, borderRadius: 3,
                                                     transition: 'width 0.5s ease',
                                                 }} />
+                                                {hasSelectedCountry && selectedCountryData && (
+                                                    <Tooltip label={`${selectedCountry}: ${selectedCountryValueStr}`}>
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            left: `calc(${selectedCountryPct}% - 4px)`,
+                                                            top: -2,
+                                                            width: 8, height: 12,
+                                                            borderRadius: '50%',
+                                                            background: '#ff922b',
+                                                            border: '1px solid white',
+                                                            boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                                                            cursor: 'help',
+                                                            zIndex: 2,
+                                                        }} />
+                                                    </Tooltip>
+                                                )}
                                             </div>
                                         </td>
                                     );

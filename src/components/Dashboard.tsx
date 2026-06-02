@@ -2,13 +2,14 @@ import { useState, useMemo } from 'react';
 import { LoadingOverlay, Slider, Select, SegmentedControl } from '@mantine/core';
 import {
     IconLayoutDashboard, IconChartScatter,
-    IconTimeline, IconFlask, IconHierarchy, IconGridDots,
+    IconTimeline, IconFlask, IconHierarchy,
 } from '@tabler/icons-react';
 import {
     performStableAnalysis, buildStableCentroids,
     assignClusterNamesZScore,
     getMetricLabel, type ClusteredData,
 } from '../services/analysis';
+import type { SectoralDataWithTargets } from '../types/energy';
 import { useEnergyData } from '../data/useEnergyData';
 import { useSectoralData } from '../data/useSectoralData';
 import { InteractionProvider, useInteraction } from '../context/InteractionContext';
@@ -16,7 +17,6 @@ import { InteractionProvider, useInteraction } from '../context/InteractionConte
 import MapChart from './MapChart';
 import ClusterRadarChart from './ClusterRadarChart';
 import { ClusterScatterPlot } from './ClusterScatterPlot';
-import { ClusterCompositionList } from './ClusterCompositionList';
 import { SectoralEmissionsChart } from './SectoralEmissionsChart';
 import { GoalTrackingChart } from './GoalTrackingChart';
 import { EnergyMixChart } from './EnergyMixChart';
@@ -31,6 +31,8 @@ import { CountryDetailPanel } from './CountryDetailPanel';
 import { DendrogramChart } from './DendrogramChart';
 import { ClusterStabilityChart } from './ClusterStabilityChart';
 import { ClusterContextProfile } from './ClusterContextProfile';
+import { PCABiplot } from './PCABiplot';
+import { CountryTrajectory } from './CountryTrajectory';
 
 const METRICS: string[] = [
     'renewable_share', 'energy_dependency', 'ghg_intensity',
@@ -54,27 +56,48 @@ const DashboardInner = () => {
     const [metric, setMetric] = useState<string>('renewable_share');
     const [mapMode, setMapMode] = useState<string>('cluster');
     const [view, setView]     = useState<string>('overview');
+    const [pcaExpanded, setPcaExpanded] = useState<boolean>(false);
 
     const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry } = useInteraction();
 
     // ── Stable centroids: computed once from all-years country averages ────────
     const stableCentroids = useMemo<number[][]>(() => {
         if (!data || data.length === 0) return [];
-        return buildStableCentroids(data as any, 4);
+        return buildStableCentroids(data, 4);
     }, [data]);
-
-    // ── Per-year analysis using stable centroids ───────────────────────────────
-    const analyzedData = useMemo<ClusteredData[]>(() => {
-        if (stableCentroids.length === 0) return [];
-        return performStableAnalysis((data || []) as any, year, 4, stableCentroids);
-    }, [data, year, stableCentroids]);
 
     // ── All-years data (same stable centroids, UMAP skipped for performance) ─
     const allYearsClusteredData = useMemo<ClusteredData[]>(() => {
         if (!data || data.length === 0 || stableCentroids.length === 0) return [];
-        const years = Array.from(new Set((data as any[]).map((d: any) => d.year))).sort() as number[];
-        return years.flatMap(y => performStableAnalysis((data || []) as any, y, 4, stableCentroids, true));
+        const years = Array.from(new Set(data.map(d => d.year))).sort();
+        const results: ClusteredData[] = [];
+        let previousAssignments: Record<string, number> = {};
+
+        years.forEach(y => {
+            const clustered = performStableAnalysis(data, y, 4, stableCentroids, true, previousAssignments);
+            results.push(...clustered);
+            clustered.forEach(c => {
+                previousAssignments[c.country] = c.cluster;
+            });
+        });
+        return results;
     }, [data, stableCentroids]);
+
+    // ── Per-year analysis using stable centroids ───────────────────────────────
+    const analyzedData = useMemo<ClusteredData[]>(() => {
+        if (stableCentroids.length === 0) return [];
+        
+        // Retrieve previous-year assignments from allYearsClusteredData for consistency
+        const prevYear = year - 1;
+        const prevAssignments: Record<string, number> = {};
+        allYearsClusteredData.forEach(d => {
+            if (d.year === prevYear) {
+                prevAssignments[d.country] = d.cluster;
+            }
+        });
+
+        return performStableAnalysis(data || [], year, 4, stableCentroids, false, prevAssignments);
+    }, [data, year, stableCentroids, allYearsClusteredData]);
 
     // ── Stability stats for KPI row ──────────────────────────────────────────
     const stabilityStats = useMemo(() => {
@@ -307,7 +330,7 @@ const DashboardInner = () => {
                             </p>
                         </div>
 
-                                        {/* Row 1: Radar + Scatter */}
+                        {/* Row 1: Radar + Scatter */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
@@ -322,9 +345,42 @@ const DashboardInner = () => {
                             <DendrogramChart data={analyzedData} k={4} />
                         </div>
 
-                        {/* Row 3: Heatmap (replaces ClusterCompositionList — consolidated per Fabian feedback) */}
+                        {/* Row 3: Consolidated Cluster Detail (Heatmap + Composition) */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <HeatmapChart data={analyzedData} clusterNames={clusterNames} />
+                        </div>
+
+                        {/* Row 4: Collapsible Advanced PCA Biplot */}
                         <div className="chart-card">
-                            <HeatmapChart data={analyzedData} />
+                            <div 
+                                onClick={() => setPcaExpanded(!pcaExpanded)} 
+                                style={{ 
+                                    cursor: 'pointer', 
+                                    padding: '12px 16px', 
+                                    background: 'rgba(255,255,255,0.03)', 
+                                    borderRadius: 6,
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    border: '1px solid rgba(255,255,255,0.06)',
+                                    userSelect: 'none',
+                                    transition: 'background 0.2s',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                            >
+                                <span style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}>
+                                    {pcaExpanded ? '▼ Hide Advanced PCA Analysis' : '▶ Show Advanced PCA Analysis (Dimensionality Reduction)'}
+                                </span>
+                                <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                                    Principal Component Analysis biplot and feature loading contributions
+                                </span>
+                            </div>
+                            {pcaExpanded && (
+                                <div style={{ marginTop: 12 }}>
+                                    <PCABiplot data={analyzedData} energyClusterNames={clusterNames} />
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
@@ -335,9 +391,10 @@ const DashboardInner = () => {
                 {view === 'typologies' && (
                     <>
                         <div className="page-header">
-                            <h1>Country Types</h1>
+                            <h1>Country Typologies</h1>
                             <p>
-                                Countries are classified by their economic wealth and climate conditions. See how these factors influence their energy choices.
+                                Structural typologies group countries by stable baseline factors (economic wealth and climate) that change very slowly. 
+                                Contrast this with dynamic energy clusters to understand how countries with similar structural conditions pursue different transition strategies.
                             </p>
                         </div>
 
@@ -386,6 +443,11 @@ const DashboardInner = () => {
                             <p>How has energy use, renewable growth, and country group membership changed from 2010 to 2023?</p>
                         </div>
 
+                        {/* Country Temporal Sparklines and Timeline */}
+                        <div style={{ marginBottom: 16 }}>
+                            <CountryTrajectory data={allYearsClusteredData} clusterNames={clusterNames} />
+                        </div>
+
                                                 {/* Row 1: Trend chart + Stability chart side by side */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
@@ -432,7 +494,7 @@ const DashboardInner = () => {
 // ──────────────────────────────────────────────────────────────────────────────
 const KPIRow = ({ data, sectoralData, year, stabilityStats }: {
     data: ClusteredData[];
-    sectoralData: any[];
+    sectoralData: SectoralDataWithTargets[];
     year: number;
     stabilityStats: { total: number; avgPerYear: string };
 }) => {
@@ -453,9 +515,9 @@ const KPIRow = ({ data, sectoralData, year, stabilityStats }: {
             </div>
             <div className="kpi-card">
                 <div className="kpi-label">Emissions vs. Year 2000</div>
-                <div className={`kpi-value ${latestSectoral?.emissionsVs2000 < 0 ? 'positive' : 'negative'}`}
+                <div className={`kpi-value ${(latestSectoral?.emissionsVs2000 ?? 0) < 0 ? 'positive' : 'negative'}`}
                     title="How much CO₂ emissions have changed compared to the year 2000. Negative = good progress.">
-                    {latestSectoral ? `${latestSectoral.emissionsVs2000.toFixed(1)}%` : '—'}
+                    {latestSectoral?.emissionsVs2000 !== undefined ? `${latestSectoral.emissionsVs2000.toFixed(1)}%` : '—'}
                 </div>
             </div>
             <div className="kpi-card">

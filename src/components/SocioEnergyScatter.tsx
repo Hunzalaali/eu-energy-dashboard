@@ -80,7 +80,7 @@ export const SocioEnergyScatter = ({
             });
 
         const pts = energyData
-            .filter(d => d.year === year || true) // energyData is already filtered to selected year
+            .filter(d => d.year === year)
             .map(d => {
                 const xSource = typoData.find(t => t.country === d.country && t.year === year);
                 const x = xSource ? (xSource[xKey as keyof EnergyData] as number) : undefined;

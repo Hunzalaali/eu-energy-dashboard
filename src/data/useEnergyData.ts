@@ -1,27 +1,9 @@
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import type { EnergyData } from '../types/energy';
 
-export interface EnergyData {
-    country: string;
-    year: number;
-    iso_alpha?: string;
-    renewable_share: number;
-    energy_dependency: number;
-    ghg_intensity: number;
-    energy_intensity: number;
-    fossil_share: number;
-    nuclear_share: number;
-    per_capita_toe?: number;
-    renewable_share_elec?: number;
-    gdp_pps?: number;
-    mfg_share?: number;
-    urb_rate?: number;
-    hdd?: number;
-    pop_density?: number;
-    cluster?: number;
-    clusterName?: string;
-    [key: string]: string | number | undefined;
-}
+// Re-export so existing imports like `import { EnergyData } from '../data/useEnergyData'` still work
+export type { EnergyData } from '../types/energy';
 
 export const useEnergyData = () => {
     const [data, setData] = useState<EnergyData[]>([]);
@@ -32,10 +14,7 @@ export const useEnergyData = () => {
         const fetchData = async () => {
             try {
                 const response = await fetch('/unified_eu_energy_data_with_context.csv');
-                const reader = response.body?.getReader();
-                const result = await reader?.read();
-                const decoder = new TextDecoder('utf-8');
-                const csv = decoder.decode(result?.value);
+                const csv = await response.text();
 
                 Papa.parse(csv, {
                     header: true,

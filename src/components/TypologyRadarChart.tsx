@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Paper, Title, Text, Group, Badge } from '@mantine/core';
 import type { EnergyData } from '../data/useEnergyData';
+import { useInteraction } from '../context/InteractionContext';
 
 /**
  * Typology Radar Chart
@@ -38,6 +39,15 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, year }) => {
+    const { selectedCountry } = useInteraction();
+
+    const selectedTypology = useMemo(() => {
+        if (!selectedCountry || !data || data.length === 0) return null;
+        const countryRow = data.find(d => d.country === selectedCountry && d.year === year);
+        if (!countryRow || countryRow.cluster === undefined || countryRow.cluster === -1) return null;
+        return TYPO_NAMES[countryRow.cluster as number] || null;
+    }, [data, selectedCountry, year]);
+
     const radarData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
@@ -109,18 +119,24 @@ export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, ye
 
             {/* Legend badges */}
             <Group gap="xs" mb="sm" wrap="wrap">
-                {presentTypologies.map((name, i) => (
-                    <Badge
-                        key={name} size="xs" variant="light"
-                        style={{
-                            color: TYPO_COLORS[TYPO_NAMES.indexOf(name)],
-                            background: TYPO_COLORS[TYPO_NAMES.indexOf(name)] + '22',
-                            border: `1px solid ${TYPO_COLORS[TYPO_NAMES.indexOf(name)]}44`,
-                        }}
-                    >
-                        {name}
-                    </Badge>
-                ))}
+                {presentTypologies.map((name) => {
+                    const isSelected = selectedTypology === name;
+                    const idx = TYPO_NAMES.indexOf(name);
+                    return (
+                        <Badge
+                            key={name} size="xs" variant={isSelected ? "filled" : "light"}
+                            style={{
+                                color: isSelected ? '#fff' : TYPO_COLORS[idx],
+                                background: isSelected ? TYPO_COLORS[idx] : TYPO_COLORS[idx] + '22',
+                                border: `1px solid ${TYPO_COLORS[idx]}44`,
+                                transform: isSelected ? 'scale(1.05)' : 'none',
+                                fontWeight: isSelected ? 700 : 500,
+                            }}
+                        >
+                            {name} {isSelected ? `(contains ${selectedCountry})` : ''}
+                        </Badge>
+                    );
+                })}
             </Group>
 
             <ResponsiveContainer width="100%" height={300}>
@@ -130,14 +146,19 @@ export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, ye
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Tooltip formatter={(value: any) => [`${value} (relative)`, '']} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {presentTypologies.map(name => (
-                        <Radar
-                            key={name} name={name} dataKey={name}
-                            stroke={TYPO_COLORS[TYPO_NAMES.indexOf(name)]}
-                            fill={TYPO_COLORS[TYPO_NAMES.indexOf(name)]}
-                            fillOpacity={0.3}
-                        />
-                    ))}
+                    {presentTypologies.map(name => {
+                        const isSelected = selectedTypology === name;
+                        const idx = TYPO_NAMES.indexOf(name);
+                        return (
+                            <Radar
+                                key={name} name={name} dataKey={name}
+                                stroke={TYPO_COLORS[idx]}
+                                fill={TYPO_COLORS[idx]}
+                                strokeWidth={isSelected ? 3 : 1.5}
+                                fillOpacity={isSelected ? 0.55 : 0.15}
+                            />
+                        );
+                    })}
                 </RadarChart>
             </ResponsiveContainer>
 
@@ -147,6 +168,10 @@ export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, ye
                 based on <em>GDP per capita (PPS)</em> and <em>Heating Degree Days (HDD)</em>, split at the
                 EU-27 median. GDP captures economic capacity for energy transition; HDD captures structural
                 heating demand driven by climate.
+                <br /><br />
+                <em>Note:</em> Unlike energy clusters (which group countries by similar energy profiles and can fluctuate),
+                typologies are based on fixed structural factors (GDP, climate) that change very slowly. This provides
+                a stable reference frame for understanding why countries with similar structural conditions may pursue different energy strategies.
             </Text>
         </Paper>
     );

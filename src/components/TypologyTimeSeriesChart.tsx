@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import type { EnergyData } from '../data/useEnergyData';
+import type { EnergyData } from '../types/energy';
 
 interface TypologyTimeSeriesChartProps {
     data: EnergyData[];
@@ -23,9 +23,9 @@ export const TypologyTimeSeriesChart: React.FC<TypologyTimeSeriesChartProps> = (
         const years = Array.from(new Set(clusteredData.map(d => d.year))).sort();
         const clusters = Array.from(new Set(clusteredData.map(d => d.clusterName as string))).filter(Boolean);
 
-        return years.map(year => {
-            const yearData = clusteredData.filter(d => d.year === year);
-            const dataPoint: any = { year };
+        return years.map(yr => {
+            const yearData = clusteredData.filter(d => d.year === yr);
+            const dataPoint: Record<string, number | string | null> = { year: yr };
 
             clusters.forEach(clusterName => {
                 const clusterCountries = yearData.filter(d => d.clusterName === clusterName);
@@ -52,7 +52,7 @@ export const TypologyTimeSeriesChart: React.FC<TypologyTimeSeriesChartProps> = (
 
 
     if (chartData.length === 0) {
-        return <div className="text-gray-500 italic p-4 text-center">Loading Data...</div>;
+        return <div style={{ color: '#9ca3af', fontStyle: 'italic', padding: 16, textAlign: 'center' }}>Loading Data...</div>;
     }
 
     return (

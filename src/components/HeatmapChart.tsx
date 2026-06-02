@@ -2,16 +2,14 @@ import { useMemo } from 'react';
 import { Paper, Title, Text, Box, Tooltip } from '@mantine/core';
 import { type ClusteredData, FEATURES, getMetricLabel } from '../services/analysis';
 import { useInteraction } from '../context/InteractionContext';
+import { getClusterColorById } from '../utils/clusterColors';
 
 /**
- * Country × Indicator Heatmap with hierarchical cluster ordering.
+ * Country × Indicator Heatmap with hierarchical cluster ordering and headers.
  * 
  * Visualizes the multivariate energy profile of all EU-27 countries
- * as a color-coded matrix. Countries (rows) are ordered by cluster
- * assignment, revealing block-diagonal structure.
- * 
- * Reference: Wilkinson, L. & Friendly, M. (2009). "The History of the Cluster Heat Map."
- * The American Statistician, 63(2), 179-184.
+ * as a color-coded matrix. Rows are grouped and punctuated by cluster
+ * assignment headers, merging heatmap and cluster composition into a single, cohesive view.
  */
 
 const DIVERGING_COLORS = [
@@ -21,25 +19,22 @@ const DIVERGING_COLORS = [
 ];
 
 function getHeatColor(value: number): string {
-    // value is z-score normalized, typically -3 to +3
     const clamped = Math.max(-2.5, Math.min(2.5, value));
     const idx = Math.floor(((clamped + 2.5) / 5) * (DIVERGING_COLORS.length - 1));
     return DIVERGING_COLORS[Math.max(0, Math.min(DIVERGING_COLORS.length - 1, idx))];
 }
 
-const CLUSTER_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe', '#00C49F'];
-
 interface HeatmapChartProps {
     data: ClusteredData[];
+    clusterNames?: Record<number, string>;
 }
 
-export const HeatmapChart = ({ data }: HeatmapChartProps) => {
+export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
     const { hoveredCountry, selectedCountry, selectedCluster, setHoveredCountry, toggleCountry } = useInteraction();
 
-    const { rows, zScoreData } = useMemo(() => {
-        if (!data || data.length === 0) return { rows: [], zScoreData: new Map(), globalMeans: {}, globalStds: {} };
+    const { sortedData, zScoreData } = useMemo(() => {
+        if (!data || data.length === 0) return { sortedData: [], zScoreData: new Map() };
 
-        // Compute global means and stds for z-score normalization
         const means: Record<string, number> = {};
         const stds: Record<string, number> = {};
 
@@ -51,7 +46,6 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
             stds[f] = Math.sqrt(variance) || 1;
         });
 
-        // Compute z-scores for each country
         const zData = new Map<string, Record<string, number>>();
         data.forEach(d => {
             const row: Record<string, number> = {};
@@ -67,46 +61,148 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
             return (Number(b.renewable_share) || 0) - (Number(a.renewable_share) || 0);
         });
 
-        return { rows: sorted, zScoreData: zData, globalMeans: means, globalStds: stds };
+        return { sortedData: sorted, zScoreData: zData };
     }, [data]);
 
-    if (rows.length === 0) return <Text>No data available</Text>;
+    // Build the sequential rendering plan: headers + rows
+    const { renderingPlan, positions, totalHeight } = useMemo(() => {
+        if (sortedData.length === 0) return { renderingPlan: [], positions: [], totalHeight: 0 };
 
-    const cellW = 90;
+        const plan: ({ type: 'header'; clusterId: number; label: string; count: number } | { type: 'row'; data: ClusteredData; index: number })[] = [];
+        const activeClusters = Array.from(new Set(sortedData.map(d => d.cluster))).sort((a, b) => a - b);
+        
+        activeClusters.forEach(cid => {
+            const clusterCountries = sortedData.filter(d => d.cluster === cid);
+            plan.push({
+                type: 'header',
+                clusterId: cid,
+                label: clusterNames?.[cid] || `Cluster ${cid}`,
+                count: clusterCountries.length,
+            });
+            clusterCountries.forEach((countryData, idx) => {
+                plan.push({
+                    type: 'row',
+                    data: countryData,
+                    index: idx,
+                });
+            });
+        });
+
+        const headerH = 100;
+        const cellH = 24;
+        const headerRowH = 38;
+        
+        let currentY = headerH;
+        const pos = plan.map(item => {
+            const y = currentY;
+            if (item.type === 'header') {
+                currentY += headerRowH;
+            } else {
+                currentY += cellH;
+            }
+            return y;
+        });
+
+        return {
+            renderingPlan: plan,
+            positions: pos,
+            totalHeight: currentY + 55,
+        };
+    }, [sortedData, clusterNames]);
+
+    if (sortedData.length === 0) return <Text size="sm" c="dimmed">No data available for heatmap.</Text>;
+
+    const cellW = 86;
     const cellH = 24;
-    const labelW = 48;
-    const clusterW = 10;
-    const headerH = 120;
+    const labelW = 105;
+    const clusterW = 12;
+    const headerH = 100;
 
     return (
         <Paper shadow="xs" p="md" withBorder>
             <Title order={4} mb="xs">Country × Indicator Heatmap</Title>
             <Text size="xs" c="dimmed" mb="md">
-                Z-score normalized values. Blue = below average, Red = above average. Rows ordered by cluster assignment.
+                Grouped by energy profile clusters. Z-score normalized values relative to the active year's EU average. 
+                <span style={{ color: '#d6604d', fontWeight: 600 }}> Red = Above Average</span>, 
+                <span style={{ color: '#4393c3', fontWeight: 600 }}> Blue = Below Average</span>.
             </Text>
 
             <Box style={{ overflowX: 'auto' }}>
                 <svg
                     width={labelW + clusterW + cellW * FEATURES.length + 20}
-                    height={headerH + cellH * rows.length + 60}
+                    height={totalHeight}
                 >
                     {/* Column headers */}
                     {FEATURES.map((f, col) => (
                         <text
                             key={f}
-                            x={labelW + clusterW + col * cellW + cellW / 0.6}
-                            y={headerH - 50}
+                            x={labelW + clusterW + col * cellW + cellW / 1.8}
+                            y={headerH - 35}
                             textAnchor="end"
-                            fontSize={8}
-                            fill="#666"
-                            transform={`rotate(-45, ${labelW + clusterW + col * cellW + cellW / 2}, ${headerH - 8})`}
+                            fontSize={9}
+                            fill="#94a3b8"
+                            fontWeight={600}
+                            transform={`rotate(-40, ${labelW + clusterW + col * cellW + cellW / 2}, ${headerH - 8})`}
                         >
-                            {getMetricLabel(f)}
+                            {getMetricLabel(f).split(' (')[0]}
                         </text>
                     ))}
 
-                    {/* Rows */}
-                    {rows.map((row, rowIdx) => {
+                    {/* Sequential elements (headers + rows) */}
+                    {renderingPlan.map((item, planIdx) => {
+                        const y = positions[planIdx];
+
+                        if (item.type === 'header') {
+                            const color = getClusterColorById(item.clusterId, clusterNames);
+                            const isFiltered = selectedCluster !== null && item.clusterId !== selectedCluster;
+                            const opacity = isFiltered ? 0.25 : 1;
+
+                            return (
+                                <g key={`header-${item.clusterId}`} style={{ opacity, transition: 'opacity 0.25s' }}>
+                                    {/* Horizontal Divider Line */}
+                                    <line
+                                        x1={0} y1={y + 19}
+                                        x2={labelW + clusterW + cellW * FEATURES.length} y2={y + 19}
+                                        stroke="rgba(255,255,255,0.06)"
+                                        strokeWidth={1}
+                                    />
+                                    {/* Background Pill */}
+                                    <rect
+                                        x={0} y={y + 4}
+                                        width={labelW + clusterW + cellW * FEATURES.length} height={28}
+                                        fill={`${color}12`}
+                                        rx={4}
+                                    />
+                                    {/* Color Indicator Bullet */}
+                                    <circle
+                                        cx={12} cy={y + 18} r={5}
+                                        fill={color}
+                                    />
+                                    {/* Group Name */}
+                                    <text
+                                        x={24} y={y + 21}
+                                        fontSize={11.5}
+                                        fontWeight={700}
+                                        fill={color}
+                                    >
+                                        {item.label}
+                                    </text>
+                                    {/* Country Count Badge */}
+                                    <text
+                                        x={labelW + clusterW + cellW * FEATURES.length - 8} y={y + 21}
+                                        textAnchor="end"
+                                        fontSize={9.5}
+                                        fontWeight={600}
+                                        fill="#64748b"
+                                    >
+                                        {item.count} countries
+                                    </text>
+                                </g>
+                            );
+                        }
+
+                        // Otherwise, it's a row
+                        const row = item.data;
                         const zScores = zScoreData.get(row.country);
                         if (!zScores) return null;
 
@@ -123,27 +219,27 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
                                 onClick={() => toggleCountry(row.country)}
                                 style={{ cursor: 'pointer' }}
                             >
-                                {/* Hover/selection highlight */}
+                                {/* Hover/selection highlight rect */}
                                 {(isHovered || isSelected) && (
                                     <rect
                                         x={0}
-                                        y={headerH + rowIdx * cellH}
+                                        y={y}
                                         width={labelW + clusterW + cellW * FEATURES.length}
                                         height={cellH}
-                                        fill={isSelected ? 'rgba(25, 113, 194, 0.08)' : 'rgba(0,0,0,0.04)'}
-                                        stroke={isSelected ? '#1971c2' : '#aaa'}
+                                        fill={isSelected ? 'rgba(76, 110, 245, 0.08)' : 'rgba(255,255,255,0.02)'}
+                                        stroke={isSelected ? '#4c6ef5' : 'rgba(255,255,255,0.12)'}
                                         strokeWidth={isSelected ? 1.5 : 0.5}
                                     />
                                 )}
 
                                 {/* Country label */}
                                 <text
-                                    x={labelW - 4}
-                                    y={headerH + rowIdx * cellH + cellH / 2 + 4}
+                                    x={labelW - 8}
+                                    y={y + cellH / 2 + 4}
                                     textAnchor="end"
-                                    fontSize={11}
-                                    fill={isHovered || isSelected ? '#1971c2' : '#333'}
-                                    fontWeight={isHovered || isSelected ? 700 : 400}
+                                    fontSize={10.5}
+                                    fill={isHovered || isSelected ? '#4c6ef5' : '#e2e8f0'}
+                                    fontWeight={isHovered || isSelected ? 700 : 500}
                                     opacity={opacity}
                                 >
                                     {row.country}
@@ -152,12 +248,12 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
                                 {/* Cluster color strip */}
                                 <rect
                                     x={labelW}
-                                    y={headerH + rowIdx * cellH + 1}
-                                    width={clusterW}
+                                    y={y + 1}
+                                    width={clusterW - 2}
                                     height={cellH - 2}
-                                    fill={CLUSTER_COLORS[row.cluster % CLUSTER_COLORS.length]}
+                                    fill={getClusterColorById(row.cluster, clusterNames)}
                                     opacity={opacity}
-                                    rx={1}
+                                    rx={1.5}
                                 />
 
                                 {/* Data cells */}
@@ -167,18 +263,18 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
                                     return (
                                         <Tooltip
                                             key={f}
-                                            label={`${row.country} — ${getMetricLabel(f)}: ${rawVal.toFixed(2)} (z=${z.toFixed(2)})`}
+                                            label={`${row.country} — ${getMetricLabel(f)}: ${rawVal.toFixed(1)}${f.includes('share') || f.includes('dependency') ? '%' : ''} (z=${z.toFixed(2)})`}
                                             events={{ hover: true, focus: true, touch: true }}
                                         >
                                             <rect
                                                 x={labelW + clusterW + col * cellW + 1}
-                                                y={headerH + rowIdx * cellH + 1}
+                                                y={y + 1}
                                                 width={cellW - 2}
                                                 height={cellH - 2}
                                                 fill={getHeatColor(z)}
                                                 opacity={opacity}
                                                 rx={2}
-                                                stroke={isHovered ? '#333' : 'none'}
+                                                stroke={isHovered ? '#fff' : 'none'}
                                                 strokeWidth={isHovered ? 0.5 : 0}
                                             />
                                         </Tooltip>
@@ -189,8 +285,8 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
                     })}
 
                     {/* Color legend */}
-                    <g transform={`translate(${labelW + clusterW}, ${headerH + rows.length * cellH + 15})`}>
-                        <text x={0} y={0} fontSize={10} fill="#666">Low (z &lt; 0)</text>
+                    <g transform={`translate(${labelW + clusterW + 40}, ${totalHeight - 30})`}>
+                        <text x={-45} y={0} fontSize={9.5} fill="#64748b" fontWeight={600}>Below Avg (z &lt; 0)</text>
                         {DIVERGING_COLORS.map((color, i) => (
                             <rect
                                 key={i}
@@ -202,7 +298,7 @@ export const HeatmapChart = ({ data }: HeatmapChartProps) => {
                                 rx={1}
                             />
                         ))}
-                        <text x={70 + DIVERGING_COLORS.length * 20 + 5} y={0} fontSize={10} fill="#666">High (z &gt; 0)</text>
+                        <text x={70 + DIVERGING_COLORS.length * 20 + 8} y={0} fontSize={9.5} fill="#64748b" fontWeight={600}>Above Avg (z &gt; 0)</text>
                     </g>
                 </svg>
             </Box>

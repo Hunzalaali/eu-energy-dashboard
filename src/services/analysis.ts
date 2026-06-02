@@ -1,32 +1,10 @@
 
-import Papa from 'papaparse';
 import { kmeans } from 'ml-kmeans';
 import { UMAP } from 'umap-js';
-import { TSNE } from '@keckelt/tsne';
 
-export interface EnergyData {
-    country: string;
-    year: number;
-    iso_alpha?: string;
-    renewable_share: number;
-    energy_dependency: number;
-    ghg_intensity: number;
-    energy_intensity: number;
-    fossil_share: number;
-    nuclear_share: number;
-    renewable_share_elec?: number;
-    per_capita_toe?: number;
-    [key: string]: string | number | undefined;
-}
-
-export interface ClusteredData extends EnergyData {
-    cluster: number;
-    clusterTimeSeries?: number;
-    tsneX?: number;
-    tsneY?: number;
-    umapX?: number;
-    umapY?: number;
-}
+// Canonical types — single source of truth
+export type { EnergyData, ClusteredData, ClusterCentroid, AlgorithmComparison, BoxPlotStat } from '../types/energy';
+import type { EnergyData, ClusteredData, ClusterCentroid, AlgorithmComparison, BoxPlotStat } from '../types/energy';
 
 export const FEATURES = [
     'renewable_share',
@@ -38,143 +16,10 @@ export const FEATURES = [
     'nuclear_share',
 ];
 
-export const loadData = async (): Promise<EnergyData[]> => {
-    const response = await fetch('/data.csv');
-    const csvText = await response.text();
+// Dead code removed: loadData(), performAnalysis() — replaced by
+// useEnergyData hook and performStableAnalysis() respectively.
 
-    return new Promise((resolve, reject) => {
-        Papa.parse(csvText, {
-            header: true,
-            dynamicTyping: true,
-            complete: (results: Papa.ParseResult<EnergyData>) => {
-                // Filter out empty rows or bad data if necessary
-                const data = results.data as EnergyData[];
-                resolve(data.filter(row => row.country && row.year));
-            },
-            error: (error: Error) => reject(error),
-        });
-    });
-};
-
-export const performAnalysis = (data: EnergyData[], year: number, k: number = 4): ClusteredData[] => {
-    const yearData = data.filter((d) => d.year === year);
-
-    if (yearData.length === 0) return [];
-
-    // Extract features for clustering
-    const dataset = yearData.map((d) =>
-        FEATURES.map((f) => (typeof d[f] === 'number' ? d[f] : 0))
-    ) as number[][];
-
-    // Check if we have enough data
-    if (dataset.length < k) {
-        console.warn("Not enough data points for clustering");
-        return yearData.map(d => ({ ...d, cluster: 0 }));
-    }
-
-    // Standardization (Z-score normalization)
-    const means = FEATURES.map((_, i) =>
-        dataset.reduce((acc, row) => acc + row[i], 0) / dataset.length
-    );
-
-    const stds = FEATURES.map((_, i) => {
-        const mean = means[i];
-        const variance = dataset.reduce((acc, row) => acc + Math.pow(row[i] - mean, 2), 0) / dataset.length;
-        return Math.sqrt(variance) || 1; // Avoid division by zero
-    });
-
-    const scaledData = dataset.map(row =>
-        row.map((val, i) => (val - means[i]) / stds[i])
-    );
-
-    // K-Means Clustering — consensus run (pick best of 15 by lowest inertia)
-    // This dramatically reduces variance from random initialisation.
-    const euclidDist = (a: number[], b: number[]) =>
-        Math.sqrt(a.reduce((acc, v, i) => acc + Math.pow(v - b[i], 2), 0));
-
-    let bestClusters: number[] = [];
-    let bestCentroids: number[][] = [];
-    let bestInertia = Infinity;
-
-    for (let run = 0; run < 15; run++) {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++', seed: 42 + run });
-        let inertia = 0;
-        result.clusters.forEach((ci, i) => {
-            inertia += Math.pow(euclidDist(scaledData[i], result.centroids[ci]), 2);
-        });
-        if (inertia < bestInertia) {
-            bestInertia   = inertia;
-            bestClusters  = result.clusters;
-            bestCentroids = result.centroids;
-        }
-    }
-
-    // Deterministic label normalisation — sort cluster IDs by their centroid's
-    // renewable_share value (index 0 in FEATURES), ascending.
-    // This means cluster 0 is always the least-renewable group, cluster k-1 is
-    // always the most-renewable group, regardless of random seed or year.
-    const renewableIdx = FEATURES.indexOf('renewable_share'); // 0
-    const sortedClusterIds = Array.from({ length: k }, (_, i) => i)
-        .sort((a, b) => (bestCentroids[a]?.[renewableIdx] ?? 0) - (bestCentroids[b]?.[renewableIdx] ?? 0));
-
-    // Build old-id → new-id mapping
-    const clusterRemap: Record<number, number> = {};
-    sortedClusterIds.forEach((oldId, newId) => { clusterRemap[oldId] = newId; });
-
-    const clusters = bestClusters.map(c => clusterRemap[c] ?? c);
-
-
-    // t-SNE
-    let tsneResults: number[][] = [];
-    try {
-        const tsne = new TSNE({
-            dim: 2,
-            perplexity: Math.min(30, scaledData.length - 1), // Perplexity must be < N
-            earlyExaggeration: 4.0,
-            learningRate: 100.0,
-            epsilon: 10,
-            metric: 'euclidean'
-        });
-        tsne.initDataRaw(scaledData);
-        // Run iterations
-        for (let i = 0; i < 500; i++) {
-            tsne.step();
-        }
-        tsneResults = tsne.getSolution();
-    } catch (e) {
-        console.error("t-SNE failed", e);
-        tsneResults = scaledData.map(() => [0, 0]);
-    }
-
-    // UMAP
-    let umapResults: number[][] = [];
-    try {
-        const umap = new UMAP({
-            nComponents: 2,
-            nEpochs: 400, // Reduced epochs for performance
-            nNeighbors: Math.min(15, scaledData.length - 1),
-        });
-        umapResults = umap.fit(scaledData);
-    } catch (e) {
-        console.error("UMAP failed", e);
-        umapResults = scaledData.map(() => [0, 0]);
-    }
-
-    // Combine results
-    return yearData.map((d, i) => ({
-        ...d,
-        cluster: clusters[i],
-        tsneX: tsneResults[i] ? tsneResults[i][0] : 0,
-        tsneY: tsneResults[i] ? tsneResults[i][1] : 0,
-        umapX: umapResults[i] ? umapResults[i][0] : 0,
-        umapY: umapResults[i] ? umapResults[i][1] : 0,
-    }));
-};
-
-export interface ClusterCentroid {
-    cluster: number;
-    [key: string]: number;
-}
+// ClusterCentroid type now imported from types/energy.ts
 
 export const getClusterCentroids = (data: ClusteredData[]): ClusterCentroid[] => {
     const clusters = Array.from(new Set(data.map(d => d.cluster))).sort();
@@ -249,73 +94,8 @@ export const reclusterData = (data: ClusteredData[], features: string[], k: numb
     }
 };
 
-export const performTimeSeriesAnalysis = (data: EnergyData[], k: number = 4): Map<string, number> => {
-    // 1. Get all unique countries and years
-    const countries = Array.from(new Set(data.map(d => d.country)));
-    const years = Array.from(new Set(data.map(d => d.year))).sort((a, b) => a - b);
-
-    // 2. Pivot data: Create a feature vector for each country
-    const trainingData: number[][] = [];
-    const countryList: string[] = [];
-
-    countries.forEach(country => {
-        const countryData = data.filter(d => d.country === country);
-        if (countryData.length === 0) return;
-
-        const vector: number[] = [];
-        let hasData = true;
-
-        years.forEach(year => {
-            const yearEntry = countryData.find(d => d.year === year);
-            FEATURES.forEach(feature => {
-                vector.push(Number(yearEntry ? yearEntry[feature] : 0) || 0);
-            });
-        });
-
-        if (hasData) {
-            trainingData.push(vector);
-            countryList.push(country);
-        }
-    });
-
-    if (trainingData.length < k) return new Map();
-
-    // 3. Standardization (per column/feature-year)
-    const numFeatures = trainingData[0].length;
-    const means = new Array(numFeatures).fill(0);
-    const stds = new Array(numFeatures).fill(0);
-
-    for (let j = 0; j < numFeatures; j++) {
-        let sum = 0;
-        for (let i = 0; i < trainingData.length; i++) sum += trainingData[i][j];
-        means[j] = sum / trainingData.length;
-    }
-
-    for (let j = 0; j < numFeatures; j++) {
-        let sumSq = 0;
-        for (let i = 0; i < trainingData.length; i++) sumSq += Math.pow(trainingData[i][j] - means[j], 2);
-        stds[j] = Math.sqrt(sumSq / trainingData.length) || 1;
-    }
-
-    const scaledData = trainingData.map(row =>
-        row.map((val, j) => (val - means[j]) / stds[j])
-    );
-
-    // 4. K-Means
-    try {
-        const result = kmeans(scaledData, k, { initialization: 'kmeans++', seed: 42 });
-
-        // 5. Map back to country
-        const clusterMap = new Map<string, number>();
-        result.clusters.forEach((clusterIndex, i) => {
-            clusterMap.set(countryList[i], clusterIndex);
-        });
-        return clusterMap;
-    } catch (e) {
-        console.error("Time series clustering failed", e);
-        return new Map();
-    }
-};
+// Dead code removed: performTimeSeriesAnalysis() — unused, superseded by
+// buildStableCentroids + performStableAnalysis.
 
 // ---------------------------------------------------------------------------
 // STABLE CLUSTERING
@@ -384,13 +164,35 @@ export const buildStableCentroids = (data: EnergyData[], k: number = 4): number[
  * cluster when its actual energy profile drifts, not due to random seed
  * differences.
  */
+const getCountryRollingFeatures = (
+    data: EnergyData[],
+    country: string,
+    targetYear: number,
+    windowSize: number = 3
+): Record<string, number> => {
+    const years = Array.from({ length: windowSize }, (_, i) => targetYear - i);
+    const countryData = data.filter(d => d.country === country && years.includes(d.year));
+    
+    const rolled: Record<string, number> = {};
+    FEATURES.forEach(f => {
+        if (countryData.length === 0) {
+            rolled[f] = 0;
+            return;
+        }
+        const sum = countryData.reduce((acc, d) => acc + (typeof d[f] === 'number' ? (d[f] as number) : 0), 0);
+        rolled[f] = sum / countryData.length;
+    });
+    return rolled;
+};
+
 export const performStableAnalysis = (
     data: EnergyData[],
     year: number,
-    k: number = 4,
+    _k: number = 4,
     stableCentroids: number[][],
     /** Set true when you only need cluster assignments (skips UMAP — much faster) */
-    skipUMAP: boolean = false
+    skipUMAP: boolean = false,
+    previousAssignments?: Record<string, number>
 ): ClusteredData[] => {
     const yearData = data.filter(d => d.year === year);
     if (yearData.length === 0 || stableCentroids.length === 0) return [];
@@ -403,15 +205,47 @@ export const performStableAnalysis = (
         return Math.sqrt(allDataset.reduce((a, r) => a + Math.pow(r[i] - m, 2), 0) / allDataset.length) || 1;
     });
 
-    const scaledYear = yearData.map(d =>
-        FEATURES.map((f, i) => (((typeof d[f] === 'number' ? (d[f] as number) : 0)) - gMeans[i]) / gStds[i])
-    );
+    const scaledYear = yearData.map(d => {
+        const rolled = getCountryRollingFeatures(data, d.country, year, 3);
+        return FEATURES.map((f, i) => (rolled[f] - gMeans[i]) / gStds[i]);
+    });
 
-    // Assign to nearest stable centroid
+    // Assign to nearest stable centroid (with hysteresis)
     const dist = (a: number[], b: number[]) => Math.sqrt(a.reduce((s, v, i) => s + Math.pow(v - b[i], 2), 0));
-    const clusters = scaledYear.map(pt => {
+    
+    // Compute inter-centroid distance for hysteresis threshold
+    let avgInterCentroidDist = 1.0;
+    if (stableCentroids.length > 1) {
+        let sumDist = 0, count = 0;
+        for (let i = 0; i < stableCentroids.length; i++) {
+            for (let j = i + 1; j < stableCentroids.length; j++) {
+                sumDist += dist(stableCentroids[i], stableCentroids[j]);
+                count++;
+            }
+        }
+        avgInterCentroidDist = sumDist / count;
+    }
+    const hysteresisMargin = 0.15 * avgInterCentroidDist;
+
+    const clusters = scaledYear.map((pt, i) => {
+        const countryName = yearData[i].country;
         let bestC = 0, bestD = Infinity;
-        stableCentroids.forEach((c, idx) => { const d = dist(pt, c); if (d < bestD) { bestD = d; bestC = idx; } });
+        stableCentroids.forEach((c, idx) => {
+            const d = dist(pt, c);
+            if (d < bestD) {
+                bestD = d;
+                bestC = idx;
+            }
+        });
+
+        // Apply hysteresis
+        if (previousAssignments && previousAssignments[countryName] !== undefined) {
+            const prevC = previousAssignments[countryName];
+            const distToPrev = dist(pt, stableCentroids[prevC]);
+            if (prevC !== bestC && (distToPrev - bestD) < hysteresisMargin) {
+                return prevC;
+            }
+        }
         return bestC;
     });
 
@@ -676,12 +510,12 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
         'ghg_intensity':     0.9,
         'energy_intensity':  0.8,
         'per_capita_toe':    0.7,
-        'energy_dependency': 0.4,   // supply-chain dimension — intentionally deprioritised
+        'energy_dependency': 0.2,   // supply-chain dimension — intentionally heavily deprioritised
     };
 
     const featureDescriptors: Record<string, { high: string; low: string }> = {
         'renewable_share':   { high: 'Green Leaders',      low: 'Low-Renewable'  },
-        'energy_dependency': { high: 'Energy Importers',   low: 'Self-Sufficient' },
+        'energy_dependency': { high: 'High Import Dependency', low: 'Energy Self-Sufficient' },
         'ghg_intensity':     { high: 'Carbon Intensive',   low: 'Low-Carbon'     },
         'energy_intensity':  { high: 'Energy Intensive',   low: 'Efficient'      },
         'per_capita_toe':    { high: 'High Consumption',   low: 'Low Consumption'},
@@ -700,12 +534,29 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
             return { feature: f, z, weighted: Math.abs(z) * (featureWeight[f] ?? 1.0) };
         });
 
-        // Sort by weighted score — energy-mix features win ties over supply-chain features
+        // Sort by weighted score — energy-mix features win ties over supply-chain features,
+        // and energy_dependency is explicitly forced to never be the primary feature.
         const sorted = zScores
             .filter(z => Math.abs(z.z) > 0.5)
-            .sort((a, b) => b.weighted - a.weighted);
+            .sort((a, b) => {
+                if (a.feature === 'energy_dependency' && b.feature !== 'energy_dependency') return 1;
+                if (b.feature === 'energy_dependency' && a.feature !== 'energy_dependency') return -1;
+                return b.weighted - a.weighted;
+            });
 
         if (sorted.length === 0) { names[clusterId] = 'Mixed Profile'; return; }
+
+        // If the only distinctive feature is energy_dependency, lead with a fallback energy mix feature
+        if (sorted.length === 1 && sorted[0].feature === 'energy_dependency') {
+            const nextBest = zScores
+                .filter(z => z.feature !== 'energy_dependency')
+                .sort((a, b) => b.weighted - a.weighted)[0];
+            
+            const leadLabel = nextBest ? (nextBest.z > 0 ? featureDescriptors[nextBest.feature]?.high : featureDescriptors[nextBest.feature]?.low) : 'Mixed Profile';
+            const depLabel = sorted[0].z > 0 ? 'High Import Dependency' : 'Energy Self-Sufficient';
+            names[clusterId] = `${leadLabel || 'Mixed Profile'} (${depLabel})`;
+            return;
+        }
 
         // Build name from top 1–2 distinctive features
         const parts: string[] = [];
@@ -724,67 +575,8 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
     return names;
 };
 
-// --- Cluster Naming & Characterization ---
-
-const getSimpleFeatureName = (key: string) => {
-    const map: Record<string, string> = {
-        'renewable_share': 'Renewables',
-        'energy_dependency': 'Imports',
-        'ghg_intensity': 'Carbon',
-        'energy_intensity': 'Intensity',
-        'per_capita_toe': 'Consumption',
-        'fossil_share': 'Fossil',
-        'nuclear_share': 'Nuclear',
-    };
-    return map[key] || 'Mixed';
-}
-
-export const assignClusterNames = (centroids: ClusterCentroid[]): Record<number, string> => {
-    // Simple heuristic-based naming
-    // We look at the top 1-2 features that distinguish the cluster
-    // normalized centroids are best for this.
-
-    // Note: centroids passed here should be NORMALIZED (0-1) for fair comparison
-
-    const names: Record<number, string> = {};
-
-    centroids.forEach(c => {
-        // Find features with highest values
-        const features = Object.keys(c).filter(k => k !== 'cluster');
-        const sortedFeatures = features
-            .map(f => ({ feature: f, value: c[f] }))
-            .sort((a, b) => b.value - a.value);
-
-        const top1 = sortedFeatures[0];
-        const top2 = sortedFeatures[1];
-
-        let name = "Mixed Profile";
-
-        // Logic for naming based on dominant features
-        if (top1.feature === 'renewable_share' && top1.value > 0.6) {
-            name = "Green Pioneers";
-        } else if (top1.feature === 'nuclear_share' && top1.value > 0.5) {
-            name = "Nuclear Core";
-        } else if (top1.feature === 'fossil_share' && top1.value > 0.6) {
-            name = "Fossil Dependent";
-        } else if (top1.feature === 'energy_dependency' && top1.value > 0.6) {
-            name = "Import Dependent";
-        } else if (top1.feature === 'ghg_intensity' && top1.value > 0.6) {
-            name = "Carbon Intensive";
-        } else if (top1.feature === 'energy_intensity' && top1.value > 0.6) {
-            name = "High Intensity"
-        } else {
-            // Composite names
-            const f1 = getSimpleFeatureName(top1.feature);
-            const f2 = getSimpleFeatureName(top2.feature);
-            name = `${f1} & ${f2} Driven`;
-        }
-
-        names[c.cluster] = name;
-    });
-
-    return names;
-};
+// Dead code removed: assignClusterNames() — heuristic-based, superseded by
+// assignClusterNamesZScore() which uses weighted z-scores for principled naming.
 
 
 /**
@@ -797,16 +589,7 @@ export const assignClusterNames = (centroids: ClusterCentroid[]): Record<number,
 import { hierarchicalClustering } from './hierarchicalClustering';
 import { dbscan } from './dbscan';
 
-export interface AlgorithmComparison {
-    algorithm: string;
-    k: number;
-    silhouette: number;
-    dbi: number;
-    ch: number;
-    noisePoints?: number;
-    assignments: number[];
-    labels: string[];
-}
+// AlgorithmComparison type now imported from types/energy.ts
 
 export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 4): AlgorithmComparison[] => {
     const yearData = data.filter((d) => d.year === year);
@@ -891,13 +674,7 @@ export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 
     return results;
 };
 
-export interface BoxPlotStat {
-    min: number;
-    q1: number;
-    median: number;
-    q3: number;
-    max: number;
-}
+// BoxPlotStat type now imported from types/energy.ts
 
 export const getBoxPlotStats = (data: ClusteredData[], feature: string, cluster: number): BoxPlotStat | null => {
     const values = data

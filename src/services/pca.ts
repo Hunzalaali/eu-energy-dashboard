@@ -75,8 +75,16 @@ export function performPCA(data: number[][], nComponents: number = 2): PCAResult
     const covCopy = cov.map(row => [...row]);
 
     for (let comp = 0; comp < Math.min(nComponents, d); comp++) {
-        // Power iteration
-        let vec = new Array(d).fill(0).map(() => Math.random() - 0.5);
+        // Power iteration — seeded initialization for reproducibility
+        // Simple mulberry32 PRNG (deterministic)
+        let seed = 42 + comp;
+        const seededRandom = () => {
+            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+            let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+        let vec = new Array(d).fill(0).map(() => seededRandom() - 0.5);
         let eigenvalue = 0;
 
         for (let iter = 0; iter < 200; iter++) {

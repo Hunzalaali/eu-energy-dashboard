@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { Paper, Title, Text, Group, Stack, Grid, SegmentedControl } from '@mantine/core';
-import { type ClusteredData, reclusterData, assignClusterNames, getClusterCentroids, normalizeForRadar } from '../services/analysis';
+import { type ClusteredData, reclusterData, assignClusterNamesZScore } from '../services/analysis';
 import ClusterRadarChart from './ClusterRadarChart';
 import { getClusterColorById } from '../utils/clusterColors';
 
@@ -36,9 +36,7 @@ const ClusterAnalysis: React.FC<ClusterAnalysisProps> = ({ data }) => {
     // Compute cluster names for consistent coloring
     const clusterNames = React.useMemo(() => {
         if (!displayData || displayData.length === 0) return {};
-        const centroids = getClusterCentroids(displayData);
-        const normalized = normalizeForRadar(displayData, centroids);
-        return assignClusterNames(normalized);
+        return assignClusterNamesZScore(displayData);
     }, [displayData]);
 
     return (

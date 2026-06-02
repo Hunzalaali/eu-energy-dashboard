@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { type ClusteredData } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
+import { useInteraction } from '../context/InteractionContext';
 
 /**
  * Transition Flow Chart — Cluster Evolution Visualization
@@ -279,7 +280,11 @@ const SwimlaneView = ({
 };
 
 // ─── Main export ─────────────────────────────────────────────────────────────
-export const TransitionFlowChart = ({ data, selectedCountry, clusterNames }: TransitionFlowChartProps) =>
-    selectedCountry
-        ? <SwimlaneView data={data} selectedCountry={selectedCountry} clusterNames={clusterNames} />
+export const TransitionFlowChart = ({ data, selectedCountry: propSelectedCountry, clusterNames }: TransitionFlowChartProps) => {
+    const { selectedCountry: contextSelectedCountry } = useInteraction();
+    const activeCountry = propSelectedCountry !== undefined ? propSelectedCountry : contextSelectedCountry;
+
+    return activeCountry
+        ? <SwimlaneView data={data} selectedCountry={activeCountry} clusterNames={clusterNames} />
         : <AggregateView data={data} clusterNames={clusterNames} />;
+};

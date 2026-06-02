@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Paper, Title, Grid, Text, LoadingOverlay, Table, Badge, Group, Divider } from '@mantine/core';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, ComposedChart } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
 import { calculateClusterMetrics, compareAlgorithms, type EnergyData, type AlgorithmComparison } from '../services/analysis';
 
 interface MethodologyViewProps {

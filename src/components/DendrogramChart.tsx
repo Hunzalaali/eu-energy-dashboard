@@ -3,6 +3,7 @@ import { Paper, Title, Text, Group, Badge } from '@mantine/core';
 import { FEATURES, type ClusteredData } from '../services/analysis';
 import { hierarchicalClustering, type DendrogramNode } from '../services/hierarchicalClustering';
 import { useInteraction } from '../context/InteractionContext';
+import { getClusterColorById } from '../utils/clusterColors';
 
 /**
  * Dendrogram Chart — Hierarchical Clustering Tree Visualization
@@ -20,7 +21,7 @@ import { useInteraction } from '../context/InteractionContext';
  *   Journal of the American Statistical Association, 58(301), 236-244.
  */
 
-const CLUSTER_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
+
 
 interface DendrogramChartProps {
     data: ClusteredData[];
@@ -144,10 +145,10 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
 
             // Determine colors for branches
             const leftColor = node.left.cluster >= 0
-                ? CLUSTER_COLORS[node.left.cluster % CLUSTER_COLORS.length]
+                ? getClusterColorById(node.left.cluster)
                 : '#94a3b8';
             const rightColor = node.right.cluster >= 0
-                ? CLUSTER_COLORS[node.right.cluster % CLUSTER_COLORS.length]
+                ? getClusterColorById(node.right.cluster)
                 : '#94a3b8';
 
             // Draw U-shaped connector: vertical from left child to merge height,
@@ -174,7 +175,7 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
         if (node.isLeaf && node.label) {
             const country = node.label;
             const isHi = hoveredCountry === country || selectedCountry === country;
-            const color = CLUSTER_COLORS[node.cluster % CLUSTER_COLORS.length];
+            const color = getClusterColorById(node.cluster);
 
             elements.push(
                 <g key={`leaf-${country}`}

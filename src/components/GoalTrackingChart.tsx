@@ -18,6 +18,7 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
         const base = [...data]
             .filter(d => d.year >= 2010)
             .map(d => ({ ...d, projectedTrend: undefined as number | undefined }));
+        if (base.length === 0) return [];
         const lastYear = base[base.length - 1];
 
         // Ensure we have at least 10 years of data for the slope, or use as much as we have

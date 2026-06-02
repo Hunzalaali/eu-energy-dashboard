@@ -1,44 +1,9 @@
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import type { SectoralEmissions, SectoralDataWithTargets } from '../types/energy';
 
-/**
- * Real sectoral GHG emissions data from Eurostat / EEA.
- * 
- * Data source: Eurostat dataset env_air_gge (Greenhouse gas emissions by source sector)
- * Reference: European Environment Agency, "Trends and projections in Europe 2024"
- * 
- * Sectors follow CRF (Common Reporting Format) mapping:
- *   - power:       CRF 1.A.1 — Fuel combustion in energy industries
- *   - industry:    CRF 1.A.2 — Fuel combustion in manufacturing & construction
- *   - transport:   CRF 1.A.3 — Fuel combustion in transport
- *   - buildings:   CRF 1.A.4 — Fuel combustion in residential & commercial sectors
- *   - agriculture: CRF 3     — Agriculture (enteric fermentation, manure, soils)
- * 
- * Units: Million tonnes CO₂-equivalent (MtCO₂eq)
- */
-export interface SectoralEmissions {
-    country: string;
-    year: number;
-    power: number;
-    industry: number;
-    transport: number;
-    buildings: number;
-    agriculture: number;
-    total: number;
-}
-
-/**
- * Processed sectoral data with computed policy targets.
- * 
- * Targets are derived from the EU's Fit for 55 package:
- *   - 2030 target: −55% vs 2000 baseline (European Climate Law, Regulation 2021/1119)
- *   - 2050 target: Net-zero with ~10% residual (European Green Deal)
- */
-export interface SectoralDataWithTargets extends SectoralEmissions {
-    target2030: number;
-    target2050: number;
-    emissionsVs2000: number;  // Percentage change vs 2000 baseline
-}
+// Re-export so existing component imports still work
+export type { SectoralEmissions, SectoralDataWithTargets } from '../types/energy';
 
 export const useSectoralData = (selectedCountry: string | null) => {
     const [rawData, setRawData] = useState<SectoralEmissions[]>([]);
@@ -49,10 +14,7 @@ export const useSectoralData = (selectedCountry: string | null) => {
         const fetchData = async () => {
             try {
                 const response = await fetch('/eu_sectoral_emissions.csv');
-                const reader = response.body?.getReader();
-                const result = await reader?.read();
-                const decoder = new TextDecoder('utf-8');
-                const csv = decoder.decode(result?.value);
+                const csv = await response.text();
 
                 Papa.parse(csv, {
                     header: true,

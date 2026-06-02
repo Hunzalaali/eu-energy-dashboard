@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 import { scaleQuantize } from "d3-scale";
-import { type ClusteredData, getMetricLabel } from "../services/analysis";
+import { type ClusteredData } from "../services/analysis";
 import { Tooltip, Text, Group, Badge } from "@mantine/core";
 import { useInteraction } from "../context/InteractionContext";
 import { getClusterColorById } from "../utils/clusterColors";

@@ -25,11 +25,11 @@ interface ClusterStabilityChartProps {
 export const ClusterStabilityChart = ({
     data,
     clusterNames,
-    selectedCountry,
 }: ClusterStabilityChartProps) => {
-    const { selectedCluster, toggleCluster } = useInteraction();
-    const { stabilityBars, transitionLine, totalTransitions } = useMemo(() => {
-        if (!data || data.length === 0) return { stabilityBars: [], transitionLine: [], totalTransitions: 0 };
+    const { selectedCluster, toggleCluster, selectedCountry } = useInteraction();
+    
+    const { stabilityBars, transitionLine, selectedCountrySwitches, countrySwitchYears, years } = useMemo(() => {
+        if (!data || data.length === 0) return { stabilityBars: [], transitionLine: [], selectedCountrySwitches: 0, countrySwitchYears: [], years: [] };
 
         const years = Array.from(new Set(data.map(d => d.year))).sort((a, b) => a - b);
         const clusters = Array.from(new Set(data.map(d => d.cluster))).sort();
@@ -37,6 +37,8 @@ export const ClusterStabilityChart = ({
         const bars: any[] = [];
         const lines: any[] = [];
         let total = 0;
+        let selectedSwitches = 0;
+        const switchYears: number[] = [];
 
         for (let i = 1; i < years.length; i++) {
             const prevYearData = data.filter(d => d.year === years[i - 1]);
@@ -58,6 +60,15 @@ export const ClusterStabilityChart = ({
                 }
             });
 
+            if (selectedCountry) {
+                const prev = prevYearData.find(p => p.country === selectedCountry);
+                const curr = currYearData.find(c => c.country === selectedCountry);
+                if (prev && curr && prev.cluster !== curr.cluster) {
+                    selectedSwitches++;
+                    switchYears.push(years[i]);
+                }
+            }
+
             total += transitions;
 
             const barEntry: any = { year: years[i] };
@@ -70,8 +81,14 @@ export const ClusterStabilityChart = ({
             lines.push({ year: years[i], transitions });
         }
 
-        return { stabilityBars: bars, transitionLine: lines, totalTransitions: total };
-    }, [data, clusterNames]);
+        return { 
+            stabilityBars: bars, 
+            transitionLine: lines, 
+            selectedCountrySwitches: selectedSwitches,
+            countrySwitchYears: switchYears,
+            years
+        };
+    }, [data, clusterNames, selectedCountry]);
 
     const clusters = useMemo(() => Array.from(new Set(data.map(d => d.cluster))).sort(), [data]);
     const avgTransitions = transitionLine.length > 0
@@ -87,6 +104,12 @@ export const ClusterStabilityChart = ({
                         Countries that stay in the same energy cluster year after year vs. those that shifted.
                         Fewer changes = more consistent, long-term energy strategy.
                     </Text>
+                    {selectedCountry && (
+                        <Text size="xs" c="orange" fw={600} mt={6} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            🍊 <strong>{selectedCountry} Cluster Stability:</strong> {((1 - selectedCountrySwitches / Math.max(1, years.length - 1)) * 100).toFixed(0)}%
+                            ({selectedCountrySwitches === 0 ? 'never switched' : `switched ${selectedCountrySwitches} time(s) in: ${countrySwitchYears.join(', ')}`})
+                        </Text>
+                    )}
                 </div>
                 <Badge color="teal" variant="light" size="sm">
                     avg {avgTransitions} cluster changes/yr

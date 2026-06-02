@@ -31,7 +31,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                     const values = data.map(d => Number(d[f]) || 0);
                     const min = Math.min(...values);
                     const max = Math.max(...values);
-                    overlay![f] = max > min ? (Number(countryData[f]) || 0 - min) / (max - min) : 0.5;
+                    overlay![f] = max > min ? ((Number(countryData[f]) || 0) - min) / (max - min) : 0.5;
                 });
             }
         }

@@ -3,6 +3,7 @@ import { Paper, Title, Text, Box, Group, Badge, Tooltip } from '@mantine/core';
 import type { EnergyData } from '../data/useEnergyData';
 import type { ClusteredData } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
+import { useInteraction } from '../context/InteractionContext';
 
 interface TypologyCrossTabProps {
     /** Full dataset with typology cluster (cluster, clusterName) from useEnergyData */
@@ -20,6 +21,7 @@ const TYPO_COLORS = ['#4c6ef5', '#f76707', '#2f9e44', '#ae3ec9'];
 export const TypologyCrossTab = ({
     typoData, energyData, energyClusterNames, year,
 }: TypologyCrossTabProps) => {
+    const { selectedCountry } = useInteraction();
 
     const { matrix, typologyNames, energyClusters } = useMemo(() => {
         // 1. Get the typology assignment for each country (from latest year in typoData)
@@ -133,13 +135,22 @@ export const TypologyCrossTab = ({
                                         ? '#f8f9fa'
                                         : getClusterColorById(ec, energyClusterNames) + Math.round(intensity * 255).toString(16).padStart(2, '0');
 
+                                    const isSelected = selectedCountry && countries.includes(selectedCountry);
+
                                     return (
                                         <td key={ec} style={{
                                             padding: '6px 8px', textAlign: 'center',
                                             borderBottom: '1px solid #f1f3f5',
                                             background: bgColor,
-                                            transition: 'background 0.2s',
+                                            transition: 'all 0.2s',
                                             minWidth: 90,
+                                            ...(isSelected ? {
+                                                outline: '3px solid #ff922b',
+                                                outlineOffset: '-3px',
+                                                position: 'relative',
+                                                zIndex: 1,
+                                                boxShadow: '0 0 10px rgba(255, 146, 43, 0.6)',
+                                            } : {}),
                                         }}>
                                             <Tooltip
                                                 label={
