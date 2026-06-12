@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { LoadingOverlay, Slider, Select, SegmentedControl } from '@mantine/core';
+import { LoadingOverlay, Slider, Select, SegmentedControl, Title } from '@mantine/core';
 import {
     IconLayoutDashboard, IconChartScatter,
     IconTimeline, IconFlask, IconHierarchy,
@@ -36,26 +36,26 @@ import { CountryTrajectory } from './CountryTrajectory';
 
 const METRICS: string[] = [
     'renewable_share', 'energy_dependency', 'ghg_intensity',
-    'energy_intensity', 'fossil_share', 'nuclear_share'
+    'energy_intensity', 'per_capita_toe', 'fossil_share', 'nuclear_share'
 ];
 
 // Map Explorer removed as separate tab — map is integrated directly into Overview.
 // Heatmap tab removed — HeatmapChart consolidated into Cluster Analysis view.
 const VIEWS = [
-    { id: 'overview',     label: 'Overview',          icon: IconLayoutDashboard },
-    { id: 'cluster',      label: 'Cluster Analysis',  icon: IconChartScatter },
-    { id: 'typologies',   label: 'Typologies',         icon: IconHierarchy },
-    { id: 'timeSeries',   label: 'Time Series',        icon: IconTimeline },
-    { id: 'methodology',  label: 'Methodology',        icon: IconFlask },
+    { id: 'overview', label: 'Overview', icon: IconLayoutDashboard },
+    { id: 'cluster', label: 'Cluster Analysis', icon: IconChartScatter },
+    { id: 'typologies', label: 'Typologies', icon: IconHierarchy },
+    { id: 'timeSeries', label: 'Time Series', icon: IconTimeline },
+    { id: 'methodology', label: 'Methodology', icon: IconFlask },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
 const DashboardInner = () => {
     const { data, loading } = useEnergyData();
-    const [year, setYear]     = useState<number>(2023);
+    const [year, setYear] = useState<number>(2023);
     const [metric, setMetric] = useState<string>('renewable_share');
     const [mapMode, setMapMode] = useState<string>('cluster');
-    const [view, setView]     = useState<string>('overview');
+    const [view, setView] = useState<string>('overview');
     const [pcaExpanded, setPcaExpanded] = useState<boolean>(false);
 
     const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry } = useInteraction();
@@ -86,7 +86,7 @@ const DashboardInner = () => {
     // ── Per-year analysis using stable centroids ───────────────────────────────
     const analyzedData = useMemo<ClusteredData[]>(() => {
         if (stableCentroids.length === 0) return [];
-        
+
         // Retrieve previous-year assignments from allYearsClusteredData for consistency
         const prevYear = year - 1;
         const prevAssignments: Record<string, number> = {};
@@ -123,11 +123,11 @@ const DashboardInner = () => {
     }, [allYearsClusteredData]);
 
     // ── Sectoral data ─────────────────────────────────────────────────────────
-    const { data: sectoralData }        = useSectoralData(selectedCountry);
+    const { data: sectoralData } = useSectoralData(selectedCountry);
     const { data: compareSectoralData } = useSectoralData(compareCountry);
 
-    const maxYear  = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
-    const minYear  = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
+    const maxYear = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
+    const minYear = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
     const countries = useMemo(() => Array.from(new Set((data || []).map(d => d.country))).sort(), [data]);
 
     return (
@@ -170,9 +170,9 @@ const DashboardInner = () => {
                             onChange={setSelectedCountry}
                             searchable clearable size="xs"
                             styles={{
-                                input:    { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
                                 dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
-                                option:   { color: '#e2e8f0' },
+                                option: { color: '#e2e8f0' },
                             }}
                         />
                     </div>
@@ -187,9 +187,9 @@ const DashboardInner = () => {
                             searchable clearable size="xs"
                             disabled={!selectedCountry}
                             styles={{
-                                input:    { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
                                 dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
-                                option:   { color: '#e2e8f0' },
+                                option: { color: '#e2e8f0' },
                             }}
                         />
                     </div>
@@ -202,9 +202,9 @@ const DashboardInner = () => {
                             onChange={v => setMetric(v || METRICS[0])}
                             size="xs"
                             styles={{
-                                input:    { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
                                 dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
-                                option:   { color: '#e2e8f0' },
+                                option: { color: '#e2e8f0' },
                             }}
                         />
                     </div>
@@ -225,53 +225,59 @@ const DashboardInner = () => {
 
                         <KPIRow data={analyzedData} sectoralData={sectoralData} year={year} stabilityStats={stabilityStats} />
 
-                        {/* Main coordinated row: Map + Right Panel */}
-                        <div className="chart-grid chart-grid-1-1" style={{ marginBottom: 16 }}>
-                            <div className="chart-card">
-                                <div className="chart-card-header">
-                                    <div>
-                                        <div className="chart-card-title">Spatial Overview</div>
-                                        <div className="chart-card-subtitle">Click a country to select • Click legend to filter cluster</div>
-                                    </div>
-                                    {/* Map-mode toggle is now inline in the Overview */}
-                                    <SegmentedControl
-                                        value={mapMode}
-                                        onChange={setMapMode}
-                                        data={[
-                                            { label: '🎨 Clusters', value: 'cluster' },
-                                            { label: '📊 Metric',   value: 'metric'  },
-                                        ]}
-                                        size="xs"
-                                    />
+                        {/* Map Row */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <div className="chart-card-header">
+                                <div>
+                                    <Title order={4}>Spatial Overview</Title>
+                                    <div className="chart-card-subtitle">Click a country to select • Click legend to filter cluster</div>
                                 </div>
-                                <MapChart
-                                    data={analyzedData}
-                                    metric={metric}
-                                    mode={mapMode as 'metric' | 'cluster'}
-                                    clusterNames={clusterNames}
+                                <SegmentedControl
+                                    value={mapMode}
+                                    onChange={setMapMode}
+                                    data={[
+                                        { label: '🎨 Clusters', value: 'cluster' },
+                                        { label: '📊 Metric', value: 'metric' },
+                                    ]}
+                                    size="xs"
                                 />
                             </div>
+                            <MapChart
+                                data={analyzedData}
+                                metric={metric}
+                                mode={mapMode as 'metric' | 'cluster'}
+                                clusterNames={clusterNames}
+                            />
+                        </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'row', gap: 12 }}>
+                        {/* Details Row */}
+                        <div style={{ display: 'flex', flexDirection: 'row', gap: 16, marginBottom: 16 }}>
+                            {!compareCountry && (
                                 <div className="chart-card" style={{ flex: '2' }}>
                                     <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
                                 </div>
+                            )}
 
-                                {selectedCountry ? (
-                                    compareCountry ? (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 12 }}>
+                            {selectedCountry ? (
+                                compareCountry ? (
+                                    <div style={{ display: 'flex', flexDirection: 'row', gap: 16, flex: 3 }}>
+                                        <div style={{ flex: 1 }}>
                                             <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
                                             <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
                                         </div>
-                                    ) : (
-                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
-                                    )
-                                ) : (
-                                    <div className="chart-card" style={{ flex: 1 }}>
-                                        <ClusterScatterPlot data={analyzedData} method="umap" clusterNames={clusterNames} />
                                     </div>
-                                )}
-                            </div>
+                                ) : (
+                                    <div style={{ flex: 2 }}>
+                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                    </div>
+                                )
+                            ) : (
+                                <div className="chart-card" style={{ flex: 2 }}>
+                                    <ClusterScatterPlot data={analyzedData} method="umap" clusterNames={clusterNames} />
+                                </div>
+                            )}
                         </div>
 
                         {/* Row 2: Cluster Transition Path — full width */}
@@ -327,7 +333,7 @@ const DashboardInner = () => {
                             </>
                         )}
 
-                        
+
                     </>
                 )}
 
@@ -363,12 +369,12 @@ const DashboardInner = () => {
 
                         {/* Row 4: Collapsible Advanced PCA Biplot */}
                         <div className="chart-card">
-                            <div 
-                                onClick={() => setPcaExpanded(!pcaExpanded)} 
-                                style={{ 
-                                    cursor: 'pointer', 
-                                    padding: '12px 16px', 
-                                    background: 'rgba(255,255,255,0.03)', 
+                            <div
+                                onClick={() => setPcaExpanded(!pcaExpanded)}
+                                style={{
+                                    cursor: 'pointer',
+                                    padding: '12px 16px',
+                                    background: 'rgba(255,255,255,0.03)',
                                     borderRadius: 6,
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -396,7 +402,7 @@ const DashboardInner = () => {
                     </>
                 )}
 
-                                {/* ════════════════ HEATMAP — removed as separate tab ════════════════ */}
+                {/* ════════════════ HEATMAP — removed as separate tab ════════════════ */}
 
                 {/* ════════════════ TYPOLOGIES ════════════════ */}
                 {view === 'typologies' && (
@@ -404,7 +410,7 @@ const DashboardInner = () => {
                         <div className="page-header">
                             <h1>Country Typologies</h1>
                             <p>
-                                Structural typologies group countries by stable baseline factors (economic wealth and climate) that change very slowly. 
+                                Structural typologies group countries by stable baseline factors (economic wealth and climate) that change very slowly.
                                 Contrast this with dynamic energy clusters to understand how countries with similar structural conditions pursue different transition strategies.
                             </p>
                         </div>
@@ -459,7 +465,7 @@ const DashboardInner = () => {
                             <CountryTrajectory data={allYearsClusteredData} clusterNames={clusterNames} />
                         </div>
 
-                                                {/* Row 1: Trend chart + Stability chart side by side */}
+                        {/* Row 1: Trend chart + Stability chart side by side */}
                         <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <EnergyTrendsChart
@@ -510,9 +516,9 @@ const KPIRow = ({ data, sectoralData, year, stabilityStats }: {
     stabilityStats: { total: number; avgPerYear: string };
 }) => {
     const latestSectoral = sectoralData.find(d => d.year === year);
-    const avgRenewable   = data.length > 0
+    const avgRenewable = data.length > 0
         ? data.reduce((acc, d) => acc + (Number(d.renewable_share) || 0), 0) / data.length : 0;
-    const numClusters    = new Set(data.map(d => d.cluster)).size;
+    const numClusters = new Set(data.map(d => d.cluster)).size;
 
     return (
         <div className="kpi-row">

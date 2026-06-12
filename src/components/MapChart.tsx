@@ -34,10 +34,31 @@ export const ISO_TO_NAME: { [key: string]: string } = Object.fromEntries(
     Object.entries(NAME_TO_ISO).map(([k, v]) => [v, k])
 );
 
-const METRIC_COLORS = [
-    "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6",
-    "#4292c6", "#2171b5", "#08519c", "#08306b"
-];
+const COLOR_SCALES: Record<string, string[]> = {
+    blue: ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b"],
+    green: ["#f7fcf5", "#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#41ab5d", "#238b45", "#006d2c", "#00441b"],
+    red: ["#fff5f0", "#fee0d2", "#fcbba1", "#fc9272", "#fb6a4a", "#ef3b2c", "#cb181d", "#a50f15", "#67000d"],
+    purple: ["#fcfbfd", "#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#807dba", "#6a51a3", "#54278f", "#3f007d"],
+    orange: ["#fff5eb", "#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#f16913", "#d94801", "#a63603", "#7f2704"],
+};
+
+const getMetricColorScale = (metric: string): string[] => {
+    if (metric.includes('renewable')) return COLOR_SCALES.green;
+    if (metric.includes('ghg') || metric.includes('fossil') || metric.includes('intensity') || metric.includes('capita')) return COLOR_SCALES.red;
+    if (metric.includes('nuclear')) return COLOR_SCALES.purple;
+    if (metric.includes('dependency')) return COLOR_SCALES.orange;
+    return COLOR_SCALES.blue;
+};
+
+const formatMetricValue = (val: number | undefined): string => {
+    if (val === undefined || isNaN(val)) return "0";
+    if (val === 0) return "0";
+    const abs = Math.abs(val);
+    if (abs < 0.01) return val.toFixed(4);
+    if (abs < 0.1) return val.toFixed(3);
+    if (abs < 1) return val.toFixed(2);
+    return val.toFixed(1);
+};
 
 interface MapChartProps {
     data: ClusteredData[];
@@ -62,7 +83,7 @@ const MapChart: React.FC<MapChartProps> = ({
         const values = data.map((d) => Number(d[metric]) || 0);
         const minVal = Math.min(...values);
         const maxVal = Math.max(...values);
-        const scale = scaleQuantize<string>().domain([minVal, maxVal]).range(METRIC_COLORS);
+        const scale = scaleQuantize<string>().domain([minVal, maxVal]).range(getMetricColorScale(metric));
         return { colorScale: scale, min: minVal, max: maxVal };
     }, [data, metric, mode]);
 
@@ -71,7 +92,7 @@ const MapChart: React.FC<MapChartProps> = ({
         data.forEach((d) => {
             const entry = {
                 value: mode === 'cluster' ? d.cluster : (Number(d[metric]) || 0),
-                label: mode === 'cluster' ? `Cluster ${d.cluster}` : Number(d[metric])?.toFixed(2),
+                label: mode === 'cluster' ? `Cluster ${d.cluster}` : formatMetricValue(Number(d[metric]) || 0),
                 cluster: d.cluster,
                 country: d.country,
             };
@@ -129,13 +150,13 @@ const MapChart: React.FC<MapChartProps> = ({
                     )}
                     {mode === 'metric' && (
                         <Group gap={6}>
-                            <Text size="xs">{min.toFixed(1)}</Text>
+                            <Text size="xs">{formatMetricValue(min)}</Text>
                             <div style={{
                                 width: 80, height: 10,
-                                background: `linear-gradient(to right, ${METRIC_COLORS.join(', ')})`,
+                                background: `linear-gradient(to right, ${getMetricColorScale(metric).join(', ')})`,
                                 borderRadius: 4,
                             }} />
-                            <Text size="xs">{max.toFixed(1)}</Text>
+                            <Text size="xs">{formatMetricValue(max)}</Text>
                         </Group>
                     )}
                 </div>

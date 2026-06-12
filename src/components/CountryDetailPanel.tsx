@@ -51,7 +51,7 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
                     <Title order={4}>{effectiveCountry}</Title>
                     <Badge
                         size="sm"
-                        color={['indigo', 'teal', 'orange', 'red'][countryData.cluster % 4]}
+                        color={['red', 'indigo', 'blue', 'green'][countryData.cluster % 4]}
                     >
                         {clusterNames[countryData.cluster] || `C${countryData.cluster}`}
                     </Badge>
