@@ -21,10 +21,9 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
         if (base.length === 0) return [];
         const lastYear = base[base.length - 1];
 
-        // Ensure we have at least 10 years of data for the slope, or use as much as we have
-        const lookbackYears = 10;
-        const pastYearIndex = Math.max(0, base.length - 1 - lookbackYears);
-        const pastYear = base[pastYearIndex];
+        // Use the entire historical period to calculate the true structural trend
+        // (prevents the 2020 COVID shock from creating an artificially steep 10yr slope)
+        const pastYear = base[0]; // Usually 2010
         
         let slope = 0;
         if (lastYear.year !== pastYear.year) {
@@ -112,7 +111,7 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
                     <Line
                         type="monotone"
                         dataKey="projectedTrend"
-                        name="Projected Trend (10yr)"
+                        name="Projected Trend (Historical)"
                         stroke="#e03131"
                         strokeWidth={2}
                         strokeDasharray="4 4"

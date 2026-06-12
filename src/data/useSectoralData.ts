@@ -74,14 +74,14 @@ export const useSectoralData = (selectedCountry: string | null) => {
         // Sort by year
         filtered.sort((a, b) => a.year - b.year);
 
-        // Find the 2000 baseline for target computation
-        const baseline2000 = filtered.find(d => d.year === 2000);
-        const baselineTotal = baseline2000 ? baseline2000.total : filtered[0]?.total || 1;
+        // Find the 1990 baseline for target computation (Legally required by Fit for 55)
+        const baseline1990 = filtered.find(d => d.year === 1990);
+        const baselineTotal = baseline1990 ? baseline1990.total : filtered[0]?.total || 1;
 
         // Compute targets and relative change
         return filtered.map(d => ({
             ...d,
-            target2030: baselineTotal * 0.45,   // -55% = keep 45% of 2000
+            target2030: baselineTotal * 0.45,   // -55% = keep 45% of 1990
             target2050: baselineTotal * 0.10,    // Net-zero ≈ 10% residual
             emissionsVs2000: ((d.total - baselineTotal) / baselineTotal) * 100,
         }));

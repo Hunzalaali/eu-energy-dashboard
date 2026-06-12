@@ -572,6 +572,8 @@ The findings demonstrate that the EU energy transition is not a monolithic shift
 
 **Insight 4: Policy Communication Value.** The interactive, visual nature of these findings—presented through coordinated maps, charts, and profiles—ensures that complex analytical results are communicable to non-technical stakeholders. The automatic Z-score-based cluster naming (e.g., "Green Leaders," "Fossil Reliant," "Nuclear Powered") transforms statistical labels into intuitive policy language, reducing the barrier to interpretation.
 
+**Insight 5: The Energy Sector vs. Economy-Wide Implementation Gap.** A striking analytical paradox emerged when evaluating the Goal Tracking ("Implementation Gap") chart against the EU's 'Fit for 55' legislative baseline. When applying the legally mandated −55% reduction target (relative to 1990 levels) strictly to the energy and industrial combustion sectors, the dashboard reveals that the EU average, along with several individual member states (e.g., Germany, Sweden), has mathematically *already exceeded* the 2030 milestone as of 2022. Because official European Environment Agency assessments confirm the EU as a whole is *not* on track, this visual paradox proves a profound policy reality: the energy sector's rapid decarbonization (driven by coal phase-outs and renewable scaling) is masking a severe, economy-wide Implementation Gap driven almost entirely by the stagnation of non-energy sectors, such as agriculture and land use, which were omitted from the combustion dataset.
+
 ### 5.4 Evaluation Limitations
 
 Despite its analytical contributions, the evaluation identified several limitations:
