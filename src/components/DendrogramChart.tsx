@@ -26,6 +26,7 @@ import { getClusterColorById } from '../utils/clusterColors';
 interface DendrogramChartProps {
     data: ClusteredData[];
     k?: number;
+    clusterNames?: Record<number, string>;
 }
 
 interface LayoutNode {
@@ -40,7 +41,7 @@ interface LayoutNode {
     members: number[];
 }
 
-export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
+export const DendrogramChart = ({ data, k = 4, clusterNames }: DendrogramChartProps) => {
     const { hoveredCountry, selectedCountry, setHoveredCountry, toggleCountry } = useInteraction();
 
     const { layoutRoot, maxHeight, leafCount, cutHeight } = useMemo(() => {
@@ -69,10 +70,12 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
         const mergeHeights = result.mergeHistory.map(m => m[2]).sort((a, b) => b - a);
         const cutH = mergeHeights.length >= k ? (mergeHeights[k - 2] + mergeHeights[k - 1]) / 2 : mergeHeights[0] || 1;
 
+        const kmeansClusters = data.map(d => d.cluster);
+
         // Layout the dendrogram tree: assign x positions to leaves, y positions by height
         let leafIdx = 0;
 
-        function layout(node: DendrogramNode, clusterMap: number[]): LayoutNode {
+        function layout(node: DendrogramNode): LayoutNode {
             if (!node.left && !node.right) {
                 // Leaf node
                 const idx = node.members[0];
@@ -80,21 +83,21 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
                     x: leafIdx++,
                     y: node.height,
                     label: node.label,
-                    cluster: clusterMap[idx] ?? 0,
+                    cluster: kmeansClusters[idx] ?? 0,
                     isLeaf: true,
                     height: node.height,
                     members: node.members,
                 };
             }
 
-            const left = node.left ? layout(node.left, clusterMap) : undefined;
-            const right = node.right ? layout(node.right, clusterMap) : undefined;
+            const left = node.left ? layout(node.left) : undefined;
+            const right = node.right ? layout(node.right) : undefined;
 
             const x = ((left?.x ?? 0) + (right?.x ?? 0)) / 2;
 
-            // Determine cluster: if all members are same cluster, use that
-            const memberClusters = new Set(node.members.map(m => clusterMap[m]));
-            const cluster = memberClusters.size === 1 ? clusterMap[node.members[0]] : -1;
+            // Determine cluster: if all members are same K-Means cluster, use that
+            const memberClusters = new Set(node.members.map(m => kmeansClusters[m]));
+            const cluster = memberClusters.size === 1 ? kmeansClusters[node.members[0]] : -1;
 
             return {
                 x,
@@ -108,7 +111,7 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
             };
         }
 
-        const layoutRoot = layout(result.dendrogram, result.assignments);
+        const layoutRoot = layout(result.dendrogram);
 
         return {
             layoutRoot,
@@ -145,10 +148,10 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
 
             // Determine colors for branches
             const leftColor = node.left.cluster >= 0
-                ? getClusterColorById(node.left.cluster)
+                ? getClusterColorById(node.left.cluster, clusterNames)
                 : '#94a3b8';
             const rightColor = node.right.cluster >= 0
-                ? getClusterColorById(node.right.cluster)
+                ? getClusterColorById(node.right.cluster, clusterNames)
                 : '#94a3b8';
 
             // Draw U-shaped connector: vertical from left child to merge height,
@@ -157,13 +160,13 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
                 <g key={`link-${idx}`}>
                     {/* Left vertical */}
                     <line x1={leftX} y1={leftY} x2={leftX} y2={cy}
-                        stroke={leftColor} strokeWidth={1.5} />
+                        stroke={leftColor} strokeWidth={2.5} />
                     {/* Right vertical */}
                     <line x1={rightX} y1={rightY} x2={rightX} y2={cy}
-                        stroke={rightColor} strokeWidth={1.5} />
+                        stroke={rightColor} strokeWidth={2.5} />
                     {/* Horizontal bridge */}
                     <line x1={leftX} y1={cy} x2={rightX} y2={cy}
-                        stroke="#94a3b8" strokeWidth={1.5} />
+                        stroke="#94a3b8" strokeWidth={2.5} />
                 </g>
             );
 
@@ -175,7 +178,7 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
         if (node.isLeaf && node.label) {
             const country = node.label;
             const isHi = hoveredCountry === country || selectedCountry === country;
-            const color = getClusterColorById(node.cluster);
+            const color = getClusterColorById(node.cluster, clusterNames);
 
             elements.push(
                 <g key={`leaf-${country}`}
@@ -187,19 +190,18 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
                     <circle
                         cx={cx}
                         cy={yScale(0) + 3}
-                        r={isHi ? 5 : 3}
+                        r={isHi ? 6 : 4}
                         fill={color}
                         stroke={isHi ? '#1a1b2e' : 'white'}
-                        strokeWidth={isHi ? 1.5 : 0.5}
+                        strokeWidth={isHi ? 2 : 1}
                     />
                     <text
                         x={cx}
                         y={yScale(0) + 18}
-                        textAnchor="end"
-                        fontSize={isHi ? 11 : 9}
-                        fontWeight={isHi ? 700 : 400}
-                        fill={isHi ? '#1a1b2e' : '#64748b'}
-                        transform={`rotate(-55, ${cx}, ${yScale(0) + 18})`}
+                        textAnchor="middle"
+                        fontSize={isHi ? 11.5 : 10.5}
+                        fontWeight={isHi ? 800 : 700}
+                        fill={isHi ? '#1a1b2e' : '#495057'}
                     >
                         {country}
                     </text>
@@ -231,7 +233,7 @@ export const DendrogramChart = ({ data, k = 4 }: DendrogramChartProps) => {
                 </Badge>
             </Group>
 
-            <svg width={width} height={height} style={{ maxWidth: '100%', height: 'auto' }}>
+            <svg width={width} height={height} style={{ display: 'block', margin: '0 auto', maxWidth: '100%', height: 'auto' }}>
                 {/* Y-axis label */}
                 <text
                     x={14}

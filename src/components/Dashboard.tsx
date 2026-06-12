@@ -364,7 +364,7 @@ const DashboardInner = () => {
 
                         {/* Row 3: Dendrogram (full width) */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <DendrogramChart data={analyzedData} k={4} />
+                            <DendrogramChart data={analyzedData} k={4} clusterNames={clusterNames} />
                         </div>
 
                         {/* Row 4: Collapsible Advanced PCA Biplot */}
