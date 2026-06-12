@@ -90,7 +90,7 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
             });
         });
 
-        const headerH = 120;
+        const headerH = 50;
         const cellH = 24;
         const headerRowH = 38;
         
@@ -114,10 +114,10 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
 
     if (sortedData.length === 0) return <Text size="sm" c="dimmed">No data available for heatmap.</Text>;
 
-    const labelW = 105;
+    const labelW = 45;
     const clusterW = 12;
-    const headerH = 120;
-    const rightMargin = 150;
+    const headerH = 50;
+    const rightMargin = 20;
 
     // Dynamically calculate cell width to fit the container perfectly.
     // Minimum cell width is 60px so it doesn't get unreadable on small mobile screens.
@@ -139,23 +139,29 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
 
             <Box ref={ref} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
                 <svg
-                    width={labelW + clusterW + cellW * FEATURES.length + 150}
+                    width={Math.max(width, labelW + clusterW + cellW * FEATURES.length + rightMargin)}
                     height={totalHeight}
                 >
                     {/* Column headers */}
                     {FEATURES.map((f, col) => {
-                        const cx = labelW + clusterW + col * cellW + cellW / 8;
-                        const cy = headerH - 8;
+                        const cx = labelW + clusterW + col * cellW + cellW / 2;
+                        const cy = headerH - 22;
+                        const fullLabel = getMetricLabel(f).split(' (')[0];
+                        const words = fullLabel.split(' ');
+                        const mid = Math.ceil(words.length / 2);
+                        const line1 = words.length > 1 ? words.slice(0, mid).join(' ') : fullLabel;
+                        const line2 = words.length > 1 ? words.slice(mid).join(' ') : '';
+
                         return (
                             <text
                                 key={f}
-                                textAnchor="start"
-                                fontSize={11}
+                                textAnchor="middle"
+                                fontSize={10.5}
                                 fill="#94a3b8"
                                 fontWeight={600}
-                                transform={`translate(${cx}, ${cy}) rotate(-40)`}
                             >
-                                {getMetricLabel(f).split(' (')[0]}
+                                <tspan x={cx} y={cy}>{line1}</tspan>
+                                {line2 && <tspan x={cx} y={cy + 13}>{line2}</tspan>}
                             </text>
                         );
                     })}
