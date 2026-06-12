@@ -253,7 +253,19 @@ export const performStableAnalysis = (
     let umapResults: number[][] = scaledYear.map(() => [0, 0]);
     if (!skipUMAP) {
         try {
-            const umap = new UMAP({ nComponents: 2, nEpochs: 400, nNeighbors: Math.min(15, scaledYear.length - 1) });
+            // Deterministic PRNG to ensure UMAP layout is stable across renders
+            let seed = 42;
+            const seededRandom = () => {
+                const x = Math.sin(seed++) * 10000;
+                return x - Math.floor(x);
+            };
+            
+            const umap = new UMAP({ 
+                nComponents: 2, 
+                nEpochs: 400, 
+                nNeighbors: Math.min(15, scaledYear.length - 1),
+                random: seededRandom
+            });
             umapResults = umap.fit(scaledYear);
         } catch (e) { console.error('UMAP failed', e); }
     }
