@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Paper, Title, Text, Box, Tooltip } from '@mantine/core';
+import { useElementSize } from '@mantine/hooks';
 import { type ClusteredData, FEATURES, getMetricLabel } from '../services/analysis';
 import { useInteraction } from '../context/InteractionContext';
 import { getClusterColorById } from '../utils/clusterColors';
@@ -30,6 +31,7 @@ interface HeatmapChartProps {
 }
 
 export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
+    const { ref, width } = useElementSize();
     const { hoveredCountry, selectedCountry, selectedCluster, setHoveredCountry, toggleCountry } = useInteraction();
 
     const { sortedData, zScoreData } = useMemo(() => {
@@ -88,7 +90,7 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
             });
         });
 
-        const headerH = 100;
+        const headerH = 120;
         const cellH = 24;
         const headerRowH = 38;
         
@@ -112,11 +114,19 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
 
     if (sortedData.length === 0) return <Text size="sm" c="dimmed">No data available for heatmap.</Text>;
 
-    const cellW = 86;
-    const cellH = 24;
     const labelW = 105;
     const clusterW = 12;
-    const headerH = 100;
+    const headerH = 120;
+    const rightMargin = 150;
+
+    // Dynamically calculate cell width to fit the container perfectly.
+    // Minimum cell width is 60px so it doesn't get unreadable on small mobile screens.
+    const dynamicCellW = width > 0 
+        ? Math.max(60, (width - labelW - clusterW - rightMargin) / FEATURES.length)
+        : 110; // Default fallback before ResizeObserver fires
+
+    const cellW = dynamicCellW;
+    const cellH = 24;
 
     return (
         <Paper shadow="xs" p="md" withBorder>
@@ -127,26 +137,28 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
                 <span style={{ color: '#4393c3', fontWeight: 600 }}> Blue = Below Average</span>.
             </Text>
 
-            <Box style={{ overflowX: 'auto' }}>
+            <Box ref={ref} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
                 <svg
-                    width={labelW + clusterW + cellW * FEATURES.length + 20}
+                    width={labelW + clusterW + cellW * FEATURES.length + 150}
                     height={totalHeight}
                 >
                     {/* Column headers */}
-                    {FEATURES.map((f, col) => (
-                        <text
-                            key={f}
-                            x={labelW + clusterW + col * cellW + cellW / 1.8}
-                            y={headerH - 35}
-                            textAnchor="end"
-                            fontSize={9}
-                            fill="#94a3b8"
-                            fontWeight={600}
-                            transform={`rotate(-40, ${labelW + clusterW + col * cellW + cellW / 2}, ${headerH - 8})`}
-                        >
-                            {getMetricLabel(f).split(' (')[0]}
-                        </text>
-                    ))}
+                    {FEATURES.map((f, col) => {
+                        const cx = labelW + clusterW + col * cellW + cellW / 8;
+                        const cy = headerH - 8;
+                        return (
+                            <text
+                                key={f}
+                                textAnchor="start"
+                                fontSize={11}
+                                fill="#94a3b8"
+                                fontWeight={600}
+                                transform={`translate(${cx}, ${cy}) rotate(-40)`}
+                            >
+                                {getMetricLabel(f).split(' (')[0]}
+                            </text>
+                        );
+                    })}
 
                     {/* Sequential elements (headers + rows) */}
                     {renderingPlan.map((item, planIdx) => {

@@ -206,7 +206,7 @@ export const performStableAnalysis = (
     });
 
     const scaledYear = yearData.map(d => {
-        const rolled = getCountryRollingFeatures(data, d.country, year, 3);
+        const rolled = getCountryRollingFeatures(data, d.country, year, 1);
         return FEATURES.map((f, i) => (rolled[f] - gMeans[i]) / gStds[i]);
     });
 
@@ -225,7 +225,7 @@ export const performStableAnalysis = (
         }
         avgInterCentroidDist = sumDist / count;
     }
-    const hysteresisMargin = 0.15 * avgInterCentroidDist;
+    const hysteresisMargin = 0.05 * avgInterCentroidDist;
 
     const clusters = scaledYear.map((pt, i) => {
         const countryName = yearData[i].country;
@@ -479,9 +479,11 @@ export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange
  *
  * The naming deliberately weights energy-mix features (renewable_share,
  * fossil_share, nuclear_share, ghg_intensity) more heavily than the
- * supply-chain feature (energy_dependency). This ensures cluster names
- * always describe *what kind of energy* countries use rather than *where
- * they source it from*, keeping names on a consistent conceptual level.
+ * supply-chain feature (energy_dependency). per_capita_toe is excluded
+ * from naming entirely (weight = 0) because it measures consumption
+ * volume rather than transition strategy — a country can have low
+ * per-capita consumption due to economic size or climate, not because
+ * of any deliberate energy policy.
  *
  * Reference: inspired by Kaufman & Rousseeuw (1990) cluster characterisation.
  */
@@ -501,20 +503,24 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
         globalStds[f] = Math.sqrt(variance) || 1;
     });
 
-    // Energy-mix features get full weight; supply-chain features are deprioritised
-    // so that "Import Dependent" never outranks "Fossil Reliant" or "Green Leaders".
+    // Naming is driven exclusively by energy SOURCE composition (renewable,
+    // fossil, nuclear) with ghg_intensity as a secondary emissions signal.
+    // All other features are zeroed out:
+    //   - energy_intensity: economic efficiency metric, not source composition
+    //   - per_capita_toe: consumption volume, not transition strategy
+    //   - energy_dependency: supply-chain metric (where energy comes from, not what kind)
     const featureWeight: Record<string, number> = {
-        'renewable_share':   1.0,
-        'fossil_share':      1.0,
-        'nuclear_share':     1.0,
-        'ghg_intensity':     0.9,
-        'energy_intensity':  0.8,
-        'per_capita_toe':    0.7,
-        'energy_dependency': 0.2,   // supply-chain dimension — intentionally heavily deprioritised
+        'renewable_share':   1.0,   // primary — energy source
+        'fossil_share':      1.0,   // primary — energy source
+        'nuclear_share':     1.0,   // primary — energy source
+        'ghg_intensity':     0.5,   // secondary — emissions outcome
+        'energy_intensity':  0.2,   // excluded — economic efficiency metric
+        'per_capita_toe':    0.1,   // excluded — consumption volume
+        'energy_dependency': 0.1,   // excluded — supply-chain, not source composition
     };
 
-    const featureDescriptors: Record<string, { high: string; low: string }> = {
-        'renewable_share':   { high: 'Green Leaders',      low: 'Low-Renewable'  },
+    const featureDescriptors: Record<string, { high: string; midHigh?: string; low: string }> = {
+        'renewable_share':   { high: 'Green Leaders',      midHigh: 'Moderate Renewables', low: 'Low-Renewable'  },
         'energy_dependency': { high: 'High Import Dependency', low: 'Energy Self-Sufficient' },
         'ghg_intensity':     { high: 'Carbon Intensive',   low: 'Low-Carbon'     },
         'energy_intensity':  { high: 'Energy Intensive',   low: 'Efficient'      },
@@ -536,15 +542,27 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
 
         // Sort by weighted score — energy-mix features win ties over supply-chain features,
         // and energy_dependency is explicitly forced to never be the primary feature.
+        // Features with weight 0 (per_capita_toe) are automatically excluded since their
+        // weighted score is always 0.
         const sorted = zScores
-            .filter(z => Math.abs(z.z) > 0.5)
+            .filter(z => Math.abs(z.z) > 0.5 && (featureWeight[z.feature] ?? 1.0) > 0)
             .sort((a, b) => {
                 if (a.feature === 'energy_dependency' && b.feature !== 'energy_dependency') return 1;
                 if (b.feature === 'energy_dependency' && a.feature !== 'energy_dependency') return -1;
                 return b.weighted - a.weighted;
             });
 
-        if (sorted.length === 0) { names[clusterId] = 'Mixed Profile'; return; }
+        // Fallback: when no feature has a strong enough z-score, use the cluster's
+        // renewable_share relative to the EU average to assign a policy-relevant name.
+        if (sorted.length === 0) {
+            const clusterRenewableMean = clusterPoints.reduce(
+                (a, d) => a + (Number(d['renewable_share']) || 0), 0
+            ) / clusterPoints.length;
+            names[clusterId] = clusterRenewableMean > globalMeans['renewable_share']
+                ? 'Moderate Renewables'
+                : 'Diversified Mix';
+            return;
+        }
 
         // If the only distinctive feature is energy_dependency, lead with a fallback energy mix feature
         if (sorted.length === 1 && sorted[0].feature === 'energy_dependency') {
@@ -552,7 +570,15 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
                 .filter(z => z.feature !== 'energy_dependency')
                 .sort((a, b) => b.weighted - a.weighted)[0];
             
-            const leadLabel = nextBest ? (nextBest.z > 0 ? featureDescriptors[nextBest.feature]?.high : featureDescriptors[nextBest.feature]?.low) : 'Mixed Profile';
+            let leadLabel = 'Mixed Profile';
+            if (nextBest && featureDescriptors[nextBest.feature]) {
+                const desc = featureDescriptors[nextBest.feature];
+                if (nextBest.z > 1.0) leadLabel = desc.high;
+                else if (nextBest.z > 0 && desc.midHigh) leadLabel = desc.midHigh;
+                else if (nextBest.z > 0) leadLabel = desc.high;
+                else leadLabel = desc.low;
+            }
+            
             const depLabel = sorted[0].z > 0 ? 'High Import Dependency' : 'Energy Self-Sufficient';
             names[clusterId] = `${leadLabel || 'Mixed Profile'} (${depLabel})`;
             return;
@@ -564,12 +590,28 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
             const { feature, z } = sorted[i];
             const desc = featureDescriptors[feature];
             if (desc) {
-                const label = z > 0 ? desc.high : desc.low;
-                if (label) parts.push(label);
+                let label = '';
+                if (z > 1.0) label = desc.high;
+                else if (z > 0 && desc.midHigh) label = desc.midHigh;
+                else if (z > 0) label = desc.high;
+                else label = desc.low;
+
+                if (label) parts.push(label); // only push if not empty string
             }
         }
 
-        names[clusterId] = parts.join(' & ') || 'Mixed Profile';
+        // If parts is empty (e.g. only distinctive feature was low nuclear, which has no label),
+        // apply the same policy-relevant fallback as when sorted.length === 0.
+        if (parts.length === 0) {
+            const clusterRenewableMean = clusterPoints.reduce(
+                (a, d) => a + (Number(d['renewable_share']) || 0), 0
+            ) / clusterPoints.length;
+            names[clusterId] = clusterRenewableMean > globalMeans['renewable_share']
+                ? 'Moderate Renewables'
+                : 'Diversified Mix';
+        } else {
+            names[clusterId] = parts.join(' & ');
+        }
     });
 
     return names;

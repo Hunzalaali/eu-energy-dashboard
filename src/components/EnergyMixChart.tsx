@@ -44,7 +44,7 @@ export const EnergyMixChart = ({ data, selectedCountry }: EnergyMixChartProps) =
             <Box mb="sm">
                 <Title order={5}>Energy Mix Transition</Title>
                 <Text size="xs" c="dimmed">
-                    Share of Fossil vs Renewable vs Nuclear (%)
+                    Share of Fossil vs Renewable vs Nuclear (%) {selectedCountry ? `for ${selectedCountry}` : 'for EU-27'}
                 </Text>
             </Box>
 

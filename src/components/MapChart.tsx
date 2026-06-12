@@ -30,7 +30,7 @@ const NAME_TO_ISO: { [key: string]: string } = {
     "Sweden": "SE", "Slovenia": "SI", "Slovakia": "SK",
 };
 
-const ISO_TO_NAME: { [key: string]: string } = Object.fromEntries(
+export const ISO_TO_NAME: { [key: string]: string } = Object.fromEntries(
     Object.entries(NAME_TO_ISO).map(([k, v]) => [v, k])
 );
 
@@ -141,7 +141,6 @@ const MapChart: React.FC<MapChartProps> = ({
                 </div>
             )}
 
-            {/* Selected country info overlay */}
             {selectedCountry && dataMap.get(selectedCountry) && (
                 <div style={{
                     position: 'absolute', bottom: 8, left: 8, zIndex: 10,
@@ -150,7 +149,7 @@ const MapChart: React.FC<MapChartProps> = ({
                     border: '1px solid #e9ecef',
                 }}>
                     <Text size="xs" fw={700} c="blue">
-                        {selectedCountry} — {dataMap.get(selectedCountry)?.label}
+                        {ISO_TO_NAME[selectedCountry] || selectedCountry} ({selectedCountry}) — {dataMap.get(selectedCountry)?.label}
                     </Text>
                 </div>
             )}
@@ -196,7 +195,7 @@ const MapChart: React.FC<MapChartProps> = ({
                                     return (
                                         <Tooltip
                                             key={geo.rsmKey}
-                                            label={isEU ? `${iso}: ${dataPoint?.label}` : geo.properties.name}
+                                            label={isEU ? `${geo.properties.name} (${iso}): ${dataPoint?.label}` : geo.properties.name}
                                             events={{ hover: true, focus: true, touch: true }}
                                         >
                                             <Geography

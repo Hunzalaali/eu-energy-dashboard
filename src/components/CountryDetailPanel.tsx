@@ -43,7 +43,7 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
     });
 
     return (
-        <Paper shadow="md" p="md" withBorder radius="md"
+        <Paper shadow="sm" p="md" withBorder radius="md"
             style={{ borderLeft: '4px solid #1971c2' }}
         >
             <Group justify="space-between" mb="sm">

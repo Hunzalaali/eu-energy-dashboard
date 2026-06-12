@@ -27,7 +27,7 @@ interface TypologyRadarChartProps {
 
 // Fixed colour palette matching the 2×2 quadrant order (IDs 0–3)
 const TYPO_COLORS = ['#4c6ef5', '#f76707', '#2f9e44', '#ae3ec9'];
-const TYPO_NAMES  = ['Affluent Warm', 'Affluent Cold', 'Developing Warm', 'Developing Cold'];
+const TYPO_NAMES  = ['Wealthy Warm', 'Wealthy Cold', 'Developing Warm', 'Developing Cold'];
 
 const FEATURES = ['gdp_pps', 'mfg_share', 'urb_rate', 'hdd', 'pop_density'] as const;
 const FEATURE_LABELS: Record<string, string> = {

@@ -20,26 +20,26 @@ const EXACT_COLORS: Record<string, string> = {
     'Carbon Intensive':   '#c92a2a', // Deep red        – high GHG intensity
     'High Intensity':     '#f59f00', // Yellow-amber    – high energy intensity
     'Mixed Profile':      '#495057', // Dark slate      – no clear signal
+    'Moderate Renewables': '#20c997', // Teal-green      – above-average renewables, no dominant feature
+    'Diversified Mix':     '#868e96', // Muted slate     – below-average renewables, no dominant feature
     'Empty':              '#adb5bd', // Light grey      – empty cluster
 
     // --- assignClusterNamesZScore names (simple single-feature) ---
     'Green':              '#40c057', // Bright green
-    'Low-Renewable':      '#868e96', // Muted grey
-    'Import-Dependent':   '#e67700', // Amber (same as Import Dependent)
-    'Self-Sufficient':    '#1c7ed6', // Blue            – energy independence
-    'Carbon-Intensive':   '#c92a2a', // Same as Carbon Intensive
-    'Low-Carbon':         '#2f9e44', // Same as Green Pioneers
-    'Energy-Intensive':   '#f59f00', // Same as High Intensity
-    'Efficient':          '#0ca678', // Teal            – energy efficient
+    'Low-Renewable':      '#495057', // Dark slate/grey
+    'Import-Dependent':   '#e67700', // Amber
+    'Self-Sufficient':    '#1c7ed6', // Blue
+    'Carbon-Intensive':   '#c92a2a', // Red
+    'Low-Carbon':         '#40c057', // Bright green
+    'Energy-Intensive':   '#f59f00', // Yellow-amber
+    'Efficient':          '#0ca678', // Teal
     'High-Consumption':   '#f76707', // Deep orange
     'Low-Consumption':    '#74c0fc', // Sky blue
-    'Fossil-Reliant':     '#7c5c3a', // Brown (same as Fossil Dependent)
+    'Fossil-Reliant':     '#7c5c3a', // Brown
     'Post-Fossil':        '#51cf66', // Soft green
-    'Nuclear-Powered':    '#7048e8', // Violet (same as Nuclear Core)
+    'Nuclear-Powered':    '#7048e8', // Violet
 
     // --- Composite names: renewables mixed with import dependency ---
-    // These clusters are "green" but their defining trait is reliance on imports,
-    // so they get a teal-green rather than the darker forest green of pure renewables.
     'Imports & Renewables Driven':    '#12b886',
     'Renewables & Imports Driven':    '#12b886',
     'Import-Dependent & Green':       '#12b886',
@@ -55,19 +55,29 @@ const EXACT_COLORS: Record<string, string> = {
  * thematically appropriate colour.  Keywords are checked in priority order.
  */
 const KEYWORD_COLORS: Array<{ keywords: string[]; color: string }> = [
-    // Pure green / pioneer / post-fossil → forest green (only when NOT combined with import)
-    { keywords: ['pioneer'],                                                                      color: '#2f9e44' },
-    { keywords: ['post-fossil', 'low-carbon'],                                                    color: '#2f9e44' },
-    // When renewables appear alongside imports → teal-green (distinct from pure green)
+    // 0. Catch positive "post-fossil" before it gets snagged by the negative "fossil" rule
+    { keywords: ['post-fossil', 'low-carbon'],                                        color: '#2b8a3e' }, // Dark forest green
+
+    // 1. Check for negative/fossil descriptors FIRST so they aren't masked by 'renewable'
+    { keywords: ['fossil-reliant', 'fossil dependent', 'low-renewable'],              color: '#868e96' }, // Muted grey/slate
+    { keywords: ['carbon', 'carbon-intensive'],                                       color: '#c92a2a' }, // Deep red
+    { keywords: ['fossil'],                                                           color: '#7c5c3a' }, // Brown
+
+    // 2. Specific clusters
+    { keywords: ['nuclear'],                                                          color: '#7048e8' }, // Violet
+    
+    // 3. Moderate / Diversified (Make this BLUE instead of green for diversity)
+    { keywords: ['moderate renewable', 'moderate-renewable', 'diversified'],           color: '#228be6' }, // Distinct bright blue
+    
+    // 4. Positive / Green Leaders
+    { keywords: ['pioneer', 'leader'],                                                color: '#2b8a3e' }, // Dark forest green
     { keywords: ['renewables & import', 'imports & renew', 'import-dependent & green', 'green & import'], color: '#12b886' },
-    // Pure renewable / green (no import combo) → forest green
-    { keywords: ['green', 'renewable', 'efficient'],                                              color: '#2f9e44' },
-    { keywords: ['nuclear'],                                                                  color: '#7048e8' },
-    { keywords: ['fossil', 'fossil-reliant'],                                                 color: '#7c5c3a' },
-    { keywords: ['carbon', 'carbon-intensive'],                                               color: '#c92a2a' },
-    { keywords: ['import', 'import-dependent', 'dependency'],                                 color: '#e67700' },
-    { keywords: ['intensity', 'intensive', 'high-consumption', 'consumption'],                color: '#f59f00' },
-    { keywords: ['self-sufficient', 'low-consumption', 'efficient'],                          color: '#0ca678' },
+    { keywords: ['green', 'renewable', 'efficient'],                                  color: '#40c057' }, // Standard green
+    
+    // 5. Supply chain / Intensity
+    { keywords: ['import', 'import-dependent', 'dependency'],                         color: '#e67700' }, // Amber
+    { keywords: ['intensity', 'intensive', 'high-consumption', 'consumption'],        color: '#f59f00' }, // Yellow-amber
+    { keywords: ['self-sufficient', 'low-consumption'],                               color: '#0ca678' }, // Teal
 ];
 
 /** Fallback palette for any cluster names that don't match any rule. */

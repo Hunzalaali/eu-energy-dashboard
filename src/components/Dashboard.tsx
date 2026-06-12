@@ -14,7 +14,7 @@ import { useEnergyData } from '../data/useEnergyData';
 import { useSectoralData } from '../data/useSectoralData';
 import { InteractionProvider, useInteraction } from '../context/InteractionContext';
 
-import MapChart from './MapChart';
+import MapChart, { ISO_TO_NAME } from './MapChart';
 import ClusterRadarChart from './ClusterRadarChart';
 import { ClusterScatterPlot } from './ClusterScatterPlot';
 import { SectoralEmissionsChart } from './SectoralEmissionsChart';
@@ -165,7 +165,7 @@ const DashboardInner = () => {
                         <label>Country</label>
                         <Select
                             placeholder="All Countries"
-                            data={countries}
+                            data={countries.map(c => ({ value: c, label: `${ISO_TO_NAME[c] || c} (${c})` }))}
                             value={selectedCountry}
                             onChange={setSelectedCountry}
                             searchable clearable size="xs"
@@ -181,7 +181,7 @@ const DashboardInner = () => {
                         <label>Compare With</label>
                         <Select
                             placeholder="Select to compare..."
-                            data={countries.filter(c => c !== selectedCountry)}
+                            data={countries.filter(c => c !== selectedCountry).map(c => ({ value: c, label: `${ISO_TO_NAME[c] || c} (${c})` }))}
                             value={compareCountry}
                             onChange={setCompareCountry}
                             searchable clearable size="xs"
@@ -226,7 +226,7 @@ const DashboardInner = () => {
                         <KPIRow data={analyzedData} sectoralData={sectoralData} year={year} stabilityStats={stabilityStats} />
 
                         {/* Main coordinated row: Map + Right Panel */}
-                        <div className="chart-grid chart-grid-2-1" style={{ marginBottom: 16 }}>
+                        <div className="chart-grid chart-grid-1-1" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <div className="chart-card-header">
                                     <div>
@@ -252,8 +252,8 @@ const DashboardInner = () => {
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                <div className="chart-card" style={{ flex: '0 0 auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'row', gap: 12 }}>
+                                <div className="chart-card" style={{ flex: '2' }}>
                                     <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
                                 </div>
 
@@ -279,42 +279,53 @@ const DashboardInner = () => {
                             <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
                         </div>
 
-                        {/* Row 3: Sectoral Emissions + Goal Tracking */}
-                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
-                            <div className="chart-card">
-                                <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
-                            </div>
-                            {compareCountry ? (
-                                <div className="chart-card">
-                                    <SectoralEmissionsChart data={compareSectoralData} selectedCountry={compareCountry} highlightedSector={null} />
+                        {!compareCountry ? (
+                            <>
+                                {/* Row 3: Energy Mix + Sectoral Emissions */}
+                                <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                                    <div className="chart-card">
+                                        <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
+                                    </div>
+                                    <div className="chart-card">
+                                        <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="chart-card">
+                                {/* Row 4: Goal Tracking */}
+                                <div className="chart-card" style={{ marginBottom: 16 }}>
                                     <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
                                 </div>
-                            )}
-                        </div>
-
-                        {compareCountry && (
-                            <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
-                                <div className="chart-card">
-                                    <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
+                            </>
+                        ) : (
+                            <>
+                                {/* Row 3: Energy Mix (Compare) */}
+                                <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                                    <div className="chart-card">
+                                        <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
+                                    </div>
+                                    <div className="chart-card">
+                                        <EnergyMixChart data={data || []} selectedCountry={compareCountry} />
+                                    </div>
                                 </div>
-                                <div className="chart-card">
-                                    <GoalTrackingChart data={compareSectoralData} selectedCountry={compareCountry} />
+                                {/* Row 4: Sectoral Emissions (Compare) */}
+                                <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                                    <div className="chart-card">
+                                        <SectoralEmissionsChart data={sectoralData} selectedCountry={selectedCountry} highlightedSector={null} />
+                                    </div>
+                                    <div className="chart-card">
+                                        <SectoralEmissionsChart data={compareSectoralData} selectedCountry={compareCountry} highlightedSector={null} />
+                                    </div>
                                 </div>
-                            </div>
+                                {/* Row 5: Goal Tracking (Compare) */}
+                                <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
+                                    <div className="chart-card">
+                                        <GoalTrackingChart data={sectoralData} selectedCountry={selectedCountry} />
+                                    </div>
+                                    <div className="chart-card">
+                                        <GoalTrackingChart data={compareSectoralData} selectedCountry={compareCountry} />
+                                    </div>
+                                </div>
+                            </>
                         )}
-
-                        {/* Row 4: Energy Mix */}
-                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
-                            <div className="chart-card">
-                                <EnergyMixChart data={data || []} selectedCountry={selectedCountry} />
-                            </div>
-                            <div className="chart-card">
-                                <EnergyMixChart data={data || []} selectedCountry={compareCountry ?? null} />
-                            </div>
-                        </div>
 
                         
                     </>
@@ -340,14 +351,14 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 2: Dendrogram (full width) */}
-                        <div className="chart-card" style={{ marginBottom: 16 }}>
-                            <DendrogramChart data={analyzedData} k={4} />
-                        </div>
-
-                        {/* Row 3: Consolidated Cluster Detail (Heatmap + Composition) */}
+                        {/* Row 2: Consolidated Cluster Detail (Heatmap + Composition) */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <HeatmapChart data={analyzedData} clusterNames={clusterNames} />
+                        </div>
+
+                        {/* Row 3: Dendrogram (full width) */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <DendrogramChart data={analyzedData} k={4} />
                         </div>
 
                         {/* Row 4: Collapsible Advanced PCA Biplot */}
@@ -398,8 +409,8 @@ const DashboardInner = () => {
                             </p>
                         </div>
 
-                                                {/* Row 1: Radar + Cross-tab */}
-                        <div className="chart-grid chart-grid-1-2" style={{ marginBottom: 16 }}>
+                        {/* Row 1: Radar + Cross-tab */}
+                        <div className="chart-grid chart-grid-1-1" style={{ marginBottom: 16 }}>
                             <div className="chart-card">
                                 <TypologyRadarChart data={data} year={year} />
                             </div>
