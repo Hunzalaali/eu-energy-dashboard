@@ -513,10 +513,10 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
         'renewable_share':   1.0,   // primary — energy source
         'fossil_share':      1.0,   // primary — energy source
         'nuclear_share':     1.0,   // primary — energy source
-        'ghg_intensity':     0.5,   // secondary — emissions outcome
-        'energy_intensity':  0.2,   // excluded — economic efficiency metric
-        'per_capita_toe':    0.1,   // excluded — consumption volume
-        'energy_dependency': 0.1,   // excluded — supply-chain, not source composition
+        'ghg_intensity':     0.8,   // secondary — emissions outcome
+        'energy_intensity':  0.0,   // EXCLUDED — economic metric, see professor feedback
+        'per_capita_toe':    0.0,   // EXCLUDED — consumption volume
+        'energy_dependency': 0.0,   // EXCLUDED — supply-chain metric
     };
 
     const featureDescriptors: Record<string, { high: string; midHigh?: string; low: string }> = {

@@ -20,8 +20,6 @@ const EXACT_COLORS: Record<string, string> = {
     'Carbon Intensive':   '#c92a2a', // Deep red        – high GHG intensity
     'High Intensity':     '#f59f00', // Yellow-amber    – high energy intensity
     'Mixed Profile':      '#495057', // Dark slate      – no clear signal
-    'Moderate Renewables': '#20c997', // Teal-green      – above-average renewables, no dominant feature
-    'Diversified Mix':     '#868e96', // Muted slate     – below-average renewables, no dominant feature
     'Empty':              '#adb5bd', // Light grey      – empty cluster
 
     // --- assignClusterNamesZScore names (simple single-feature) ---
@@ -56,7 +54,7 @@ const EXACT_COLORS: Record<string, string> = {
  */
 const KEYWORD_COLORS: Array<{ keywords: string[]; color: string }> = [
     // 0. Catch positive "post-fossil" before it gets snagged by the negative "fossil" rule
-    { keywords: ['post-fossil', 'low-carbon'],                                        color: '#2b8a3e' }, // Dark forest green
+    { keywords: ['post-fossil', 'low-carbon'],                                        color: '#2f9e44' }, // Dark forest green
 
     // 1. Check for negative/fossil descriptors FIRST so they aren't masked by 'renewable'
     { keywords: ['fossil-reliant', 'fossil dependent', 'low-renewable'],              color: '#868e96' }, // Muted grey/slate
