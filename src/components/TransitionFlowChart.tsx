@@ -101,7 +101,7 @@ const SwimlaneView = ({
 
     const LANE_H = 68;
     const YEAR_LABEL_H = 28;
-    const LABEL_W = 140;
+    const LABEL_W = 220;
     const DOT_R = 11;
     const SVG_H = YEAR_LABEL_H + clusters.length * LANE_H + 20;
     const MIN_W = 680;
@@ -184,10 +184,10 @@ const SwimlaneView = ({
                         const color = getClusterColorById(cid, clusterNames);
                         return (
                             <text key={cid}
-                                x={LABEL_W - 10}
+                                x={LABEL_W - 20}
                                 y={YEAR_LABEL_H + idx * LANE_H + LANE_H / 2 + 4}
                                 textAnchor="end"
-                                fontSize={10}
+                                fontSize={11}
                                 fill={color}
                                 fontWeight={700}
                             >

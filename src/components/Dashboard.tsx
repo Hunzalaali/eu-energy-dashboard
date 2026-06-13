@@ -29,7 +29,6 @@ import { MethodologyView } from './MethodologyView';
 import { HeatmapChart } from './HeatmapChart';
 import { CountryDetailPanel } from './CountryDetailPanel';
 import { DendrogramChart } from './DendrogramChart';
-import { ClusterStabilityChart } from './ClusterStabilityChart';
 import { ClusterContextProfile } from './ClusterContextProfile';
 import { PCABiplot } from './PCABiplot';
 import { CountryTrajectory } from './CountryTrajectory';
@@ -45,7 +44,7 @@ const VIEWS = [
     { id: 'overview', label: 'Overview', icon: IconLayoutDashboard },
     { id: 'cluster', label: 'Cluster Analysis', icon: IconChartScatter },
     { id: 'typologies', label: 'Typologies', icon: IconHierarchy },
-    { id: 'timeSeries', label: 'Time Series', icon: IconTimeline },
+    { id: 'timeSeries', label: 'Temporal Trajectories', icon: IconTimeline },
     { id: 'methodology', label: 'Methodology', icon: IconFlask },
 ];
 
@@ -452,44 +451,37 @@ const DashboardInner = () => {
                     </>
                 )}
 
-                {/* ════════════════ TIME SERIES ════════════════ */}
+                {/* ════════════════ TEMPORAL TRAJECTORIES ════════════════ */}
                 {view === 'timeSeries' && (
                     <>
                         <div className="page-header">
-                            <h1>Trends Over Time</h1>
-                            <p>How has energy use, renewable growth, and country group membership changed from 2010 to 2023?</p>
+                            <h1>Temporal Trajectories</h1>
+                            <p>Track how European countries have transitioned between energy clusters over time, and explore long-term metric trends.</p>
                         </div>
-
-                        {/* Country Temporal Sparklines and Timeline */}
+                        {/* Row 2: Trend chart */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <EnergyTrendsChart
+                                data={data || []}
+                                selectedCountry={selectedCountry}
+                                metric={metric}
+                                allYearsData={allYearsClusteredData}
+                                clusterNames={clusterNames}
+                                onYearChange={setYear}
+                            />
+                        </div>
+                        {/* Row 3: Country Temporal Sparklines and Timeline (Only really relevant if a country is selected) */}
                         <div style={{ marginBottom: 16 }}>
                             <CountryTrajectory data={allYearsClusteredData} clusterNames={clusterNames} />
                         </div>
 
-                        {/* Row 1: Trend chart + Stability chart side by side */}
-                        <div className="chart-grid chart-grid-2" style={{ marginBottom: 16 }}>
-                            <div className="chart-card">
-                                <EnergyTrendsChart
-                                    data={data || []}
-                                    selectedCountry={selectedCountry}
-                                    metric={metric}
-                                    allYearsData={allYearsClusteredData}
-                                    clusterNames={clusterNames}
-                                    onYearChange={setYear}
-                                />
-                            </div>
-                            <div className="chart-card">
-                                <ClusterStabilityChart
-                                    data={allYearsClusteredData}
-                                    clusterNames={clusterNames}
-                                    selectedCountry={selectedCountry}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Row 2: Transition flow — full width */}
-                        <div className="chart-card">
+                        {/* Row 1: Transition flow — full width timeline */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
                             <TransitionFlowChart data={allYearsClusteredData} selectedCountry={selectedCountry} clusterNames={clusterNames} />
                         </div>
+
+                        
+
+                        
                     </>
                 )}
 

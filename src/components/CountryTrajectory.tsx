@@ -3,7 +3,6 @@ import { Paper, Title, Text, Box, Grid, Group, Tooltip, Badge } from '@mantine/c
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 import { useInteraction } from '../context/InteractionContext';
 import { FEATURES, getMetricLabel, type ClusteredData } from '../services/analysis';
-import { getClusterColorById } from '../utils/clusterColors';
 
 interface CountryTrajectoryProps {
     /** All years stable clustered dataset */
@@ -19,22 +18,11 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clus
         return data.filter(d => d.country === selectedCountry).sort((a, b) => a.year - b.year);
     }, [data, selectedCountry]);
 
-    const stabilityScore = useMemo(() => {
-        if (countryTimeline.length <= 1) return 100;
-        let switches = 0;
-        for (let i = 1; i < countryTimeline.length; i++) {
-            if (countryTimeline[i].cluster !== countryTimeline[i - 1].cluster) {
-                switches++;
-            }
-        }
-        return Math.round((1 - switches / (countryTimeline.length - 1)) * 100);
-    }, [countryTimeline]);
-
     if (!selectedCountry) {
         return (
             <Paper shadow="xs" p="xl" withBorder style={{ textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderStyle: 'dashed' }}>
                 <Text c="dimmed" size="sm" fw={500}>
-                    👉 Select a country in the sidebar to trace its temporal trajectory and feature sparklines.
+                    Select a country in the sidebar to trace its temporal trajectory and feature sparklines.
                 </Text>
             </Paper>
         );
@@ -54,87 +42,10 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clus
                 <div>
                     <Title order={4} mb={2}>Temporal Journey: {selectedCountry}</Title>
                     <Text size="xs" c="dimmed">
-                        A detailed view of how {selectedCountry}'s energy profile and group membership evolved from 2010 to 2023.
+                        A detailed view of how {selectedCountry}'s energy profile evolved from 2010 to 2023.
                     </Text>
                 </div>
-                <Badge 
-                    color={stabilityScore === 100 ? 'teal' : stabilityScore >= 70 ? 'blue' : 'orange'} 
-                    variant="filled" 
-                    size="sm"
-                >
-                    Stability Score: {stabilityScore}%
-                </Badge>
             </Group>
-
-            {/* 1. Group Membership History Timeline */}
-            <Box mb="lg">
-                <Text size="11px" fw={700} c="dimmed" mb={8} style={{ letterSpacing: '0.05em' }}>
-                    GROUP MEMBERSHIP EVOLUTION
-                </Text>
-                <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between', 
-                    padding: '16px 20px', 
-                    background: 'rgba(255,255,255,0.02)', 
-                    borderRadius: 6, 
-                    border: '1px solid rgba(255,255,255,0.06)', 
-                    overflowX: 'auto' 
-                }}>
-                    {countryTimeline.map((yearData, idx) => {
-                        const color = getClusterColorById(yearData.cluster, clusterNames);
-                        return (
-                            <div 
-                                key={yearData.year} 
-                                style={{ 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    alignItems: 'center', 
-                                    gap: 6, 
-                                    position: 'relative', 
-                                    flex: 1, 
-                                    minWidth: 40 
-                                }}
-                            >
-                                {/* Horizontal Connecting Line */}
-                                {idx < countryTimeline.length - 1 && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: '50%',
-                                        top: 7,
-                                        width: '100%',
-                                        height: 2,
-                                        background: 'rgba(255,255,255,0.06)',
-                                        zIndex: 0
-                                    }} />
-                                )}
-                                <Tooltip 
-                                    label={`${yearData.year}: ${clusterNames?.[yearData.cluster] || `Cluster ${yearData.cluster}`}`}
-                                    withArrow
-                                >
-                                    <div style={{
-                                        width: 14,
-                                        height: 14,
-                                        borderRadius: '50%',
-                                        background: color,
-                                        border: '2.5px solid #1a1b2e',
-                                        boxShadow: `0 0 8px ${color}bb`,
-                                        zIndex: 1,
-                                        cursor: 'help',
-                                        transition: 'transform 0.15s ease',
-                                    }} 
-                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.25)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                    />
-                                </Tooltip>
-                                <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8' }}>
-                                    {yearData.year}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </Box>
 
             {/* 2. Sparklines Grid */}
             <Text size="11px" fw={700} c="dimmed" mb={8} style={{ letterSpacing: '0.05em' }}>
