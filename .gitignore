@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Thesis documents
+Thesis_Report.md
+Thesis_Report.pdf
+Thesis_Proposal.md
