@@ -101,7 +101,7 @@ export const EnergyTrendsChart = ({
                     {selectedCountry && (
                         <Line
                             type="monotone" dataKey={selectedCountry}
-                            stroke="#228be6" strokeWidth={3} activeDot={{ r: 7 }}
+                            stroke="#ffd43b" strokeWidth={3} activeDot={{ r: 7 }}
                         />
                     )}
 

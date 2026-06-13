@@ -59,6 +59,8 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clus
                     const firstVal = values[0] ?? 0;
                     const lastVal = values[values.length - 1] ?? 0;
                     const isUp = lastVal >= firstVal;
+                    // For renewable_share, going up is good. For everything else (fossil, ghg, intensity, dependency), going down is good!
+                    const isGood = f === 'renewable_share' ? isUp : !isUp;
 
                     return (
                         <Grid.Col key={f} span={{ base: 12, sm: 6, md: 4 }}>
@@ -80,13 +82,13 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clus
                                                     padding: '4px 8px'
                                                 }}
                                                 labelStyle={{ fontSize: 9, fontWeight: 700, color: '#94a3b8' }}
-                                                itemStyle={{ fontSize: 10, color: isUp ? '#4ade80' : '#f87171', padding: 0 }}
+                                                itemStyle={{ fontSize: 10, color: isGood ? '#4ade80' : '#f87171', padding: 0 }}
                                                 formatter={(value: any) => [`${Number(value).toFixed(1)}${f.includes('share') || f.includes('dependency') ? '%' : ''}`, 'Value']}
                                             />
                                             <Line 
                                                 type="monotone" 
                                                 dataKey={f} 
-                                                stroke={isUp ? '#37b24d' : '#f03e3e'} 
+                                                stroke={isGood ? '#37b24d' : '#f03e3e'} 
                                                 strokeWidth={1.8} 
                                                 dot={false}
                                                 activeDot={{ r: 4, strokeWidth: 0 }}
@@ -102,7 +104,7 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clus
                                     <Text 
                                         size="9px" 
                                         fw={700} 
-                                        c={isUp ? 'green' : 'red'} 
+                                        c={isGood ? 'green' : 'red'} 
                                         style={{ fontVariantNumeric: 'tabular-nums' }}
                                     >
                                         2023: {lastVal.toFixed(1)}{f.includes('share') || f.includes('dependency') ? '%' : ''}
