@@ -488,7 +488,7 @@ const DashboardInner = () => {
                 {/* ════════════════ METHODOLOGY ════════════════ */}
                 {view === 'methodology' && (
                     <>
-                        <MethodologyView data={data} year={year} />
+                        <MethodologyView data={data} year={year} allYearsData={allYearsClusteredData} />
                     </>
                 )}
             </main>

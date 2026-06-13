@@ -173,53 +173,45 @@ export function hierarchicalClustering(
  */
 function cutDendrogram(root: DendrogramNode, k: number, n: number): number[] {
     if (k >= n) {
-        // Each point is its own cluster
         return Array.from({ length: n }, (_, i) => i);
     }
     if (k <= 1) {
         return new Array(n).fill(0);
     }
 
-    // Collect all internal nodes with their heights
-    const internalNodes: { node: DendrogramNode; height: number }[] = [];
-    function collectInternal(node: DendrogramNode) {
-        if (node.left && node.right) {
-            internalNodes.push({ node, height: node.height });
-            collectInternal(node.left);
-            collectInternal(node.right);
+    // Start with the root
+    const forest = [root];
+
+    // Iteratively split the highest node until we have k trees
+    for (let i = 0; i < k - 1; i++) {
+        // Find the node with the highest height
+        let maxIdx = -1;
+        let maxHeight = -1;
+        for (let j = 0; j < forest.length; j++) {
+            const node = forest[j];
+            if (node.left && node.right && node.height > maxHeight) {
+                maxHeight = node.height;
+                maxIdx = j;
+            }
         }
+
+        if (maxIdx === -1) break; // Cannot split further
+
+        // Remove the highest node and add its two children
+        const splitNode = forest.splice(maxIdx, 1)[0];
+        forest.push(splitNode.left!);
+        forest.push(splitNode.right!);
     }
-    collectInternal(root);
 
-    // Sort by height descending — the top (k-1) merges define our cut
-    internalNodes.sort((a, b) => b.height - a.height);
-
-    // The nodes to "cut" are the top (k-1) internal nodes
-    // Their children become the k clusters
-    const cutNodes = new Set(internalNodes.slice(0, k - 1).map(n => n.node.id));
-
-    // BFS to assign cluster IDs
+    // Now forest contains exactly k (or fewer if couldn't split) nodes
     const assignments = new Array(n).fill(-1);
-    let clusterId = 0;
-
-    function assignCluster(node: DendrogramNode, cId: number) {
-        if (!node.left && !node.right) {
-            // Leaf node
-            assignments[node.members[0]] = cId;
-            return;
-        }
-        if (cutNodes.has(node.id)) {
-            // This is a cut point — each child gets its own cluster
-            if (node.left) assignCluster(node.left, clusterId++);
-            if (node.right) assignCluster(node.right, clusterId++);
-        } else {
-            // Not a cut — propagate same cluster
-            if (node.left) assignCluster(node.left, cId);
-            if (node.right) assignCluster(node.right, cId);
-        }
-    }
-
-    assignCluster(root, clusterId++);
+    
+    forest.forEach((treeNode, clusterId) => {
+        // Assign this clusterId to all leaf members of this tree
+        treeNode.members.forEach(memberIdx => {
+            assignments[memberIdx] = clusterId;
+        });
+    });
 
     return assignments;
 }

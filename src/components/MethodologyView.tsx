@@ -7,6 +7,7 @@ import { getClusterColorById } from '../utils/clusterColors';
 interface MethodologyViewProps {
     data: EnergyData[];
     year: number;
+    allYearsData?: ClusteredData[];
 }
 
 type AlgorithmComparisonWithNames = AlgorithmComparison & {
@@ -36,7 +37,10 @@ const alignClusterIdsByMajority = (source: number[], target: number[]): Record<n
     return mapping;
 };
 
-export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
+export const MethodologyView = ({ data, year, allYearsData }: MethodologyViewProps) => {
+    // We must use cross-sectional (single-year) data to compute validation metrics. 
+    // Averaging 14 years of transition data mathematically pulls all countries toward the global mean, 
+    // destroying the variance separation required by Silhouette, DBI, and CH metrics.
     const metrics = useMemo(() => {
         return calculateClusterMetrics(data, year, [2, 3, 4, 5, 6, 7, 8]);
     }, [data, year]);
@@ -121,8 +125,8 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
             <Grid.Col span={12}>
                 <Title order={2} mb="xs">Methodology Validation</Title>
                 <Text size="sm" c="dimmed" mb="md">
-                    Systematic evaluation of clustering algorithms and parameter selection for EU-27 energy profile typologies ({year}).
-                    We compare multiple algorithms across four distinct validation metrics to ensure mathematical robustness.
+                    Systematic evaluation of clustering algorithms and parameter selection for EU-27 energy profile typologies ({year}). 
+                    Calculations are performed on cross-sectional data. Averaging 14 years of transition data mathematically blurs country trajectories, destroying the variance separation required by standard validation metrics (Silhouette, DBI, CH). Thus, we validate K=4 cross-sectionally before applying it to the stable global model.
                 </Text>
             </Grid.Col>
 
@@ -131,7 +135,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                 <Paper shadow="xs" p="md" withBorder>
                     <Title order={4} mb="xs">Algorithm Comparison</Title>
                     <Text size="xs" c="dimmed" mb="md">
-                        Three clustering algorithms evaluated on standardized EU-27 energy indicators.
+                        Three clustering algorithms evaluated on the 14-year averaged EU-27 energy indicators.
                         Best value per metric highlighted in green. DBSCAN discovers K automatically.
                     </Text>
                     <Table striped highlightOnHover withTableBorder withColumnBorders>

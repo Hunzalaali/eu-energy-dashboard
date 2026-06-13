@@ -432,7 +432,8 @@ const calculateSilhouette = (data: number[][], clusters: number[], k: number): n
 };
 
 export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange: number[] = [2, 3, 4, 5, 6, 7, 8]) => {
-    const yearData = data.filter((d) => d.year === year);
+    // If year === 0, bypass the year filter (used for longitudinal average validation)
+    const yearData = year === 0 ? data : data.filter((d) => d.year === year);
     if (yearData.length < Math.max(...kRange)) return [];
 
     // Extract and scale data
@@ -645,8 +646,9 @@ import { dbscan } from './dbscan';
 // AlgorithmComparison type now imported from types/energy.ts
 
 export const compareAlgorithms = (data: EnergyData[], year: number, k: number = 4): AlgorithmComparison[] => {
-    const yearData = data.filter((d) => d.year === year);
-    if (yearData.length < k) return [];
+    // If year === 0, bypass the year filter (used for longitudinal average validation)
+    const yearData = year === 0 ? data : data.filter(d => d.year === year);
+    if (yearData.length === 0) return [];
 
     const labels = yearData.map(d => d.country);
 
