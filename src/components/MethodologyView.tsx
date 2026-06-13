@@ -37,7 +37,7 @@ const alignClusterIdsByMajority = (source: number[], target: number[]): Record<n
     return mapping;
 };
 
-export const MethodologyView = ({ data, year, allYearsData }: MethodologyViewProps) => {
+export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
     // We must use cross-sectional (single-year) data to compute validation metrics. 
     // Averaging 14 years of transition data mathematically pulls all countries toward the global mean, 
     // destroying the variance separation required by Silhouette, DBI, and CH metrics.
