@@ -30,14 +30,15 @@ const ENERGY_Y_OPTIONS = [
     { value: 'energy_intensity',label: 'Energy Intensity (toe/M€)' },
     { value: 'energy_dependency',label: 'Energy Import Dependency (%)' },
     { value: 'nuclear_share',   label: 'Nuclear Share (%)' },
+    { value: 'per_capita_toe',  label: 'Energy Consumption (toe/capita)' },
 ];
 
 const CustomDot = (props: any) => {
     const { cx, cy, fill } = props;
-    const r = 7;
+    const r = 8;
     return (
         <circle cx={cx} cy={cy} r={r} fill={fill} fillOpacity={0.85}
-            stroke="#fff" strokeWidth={1.5} style={{ cursor: 'pointer' }} />
+            stroke="#fff" strokeWidth={2} style={{ cursor: 'pointer' }} />
     );
 };
 
@@ -111,8 +112,8 @@ export const SocioEnergyScatter = ({
             <Box mb="md">
                 <Title order={5}>Socioeconomic Context vs Energy Metric ({year})</Title>
                 <Text size="xs" c="dimmed">
-                    Each dot is a country — coloured by its energy cluster. Use the drop-downs to
-                    explore how structural factors correlate with energy outcomes.
+                    Each dot is a country coloured by its energy cluster. Use the dropdowns to
+                    explore how socioeconomic factors correlate with energy metrics.
                 </Text>
             </Box>
 
@@ -127,7 +128,7 @@ export const SocioEnergyScatter = ({
                     />
                 </div>
                 <div style={{ flex: 1, minWidth: 200 }}>
-                    <Text size="xs" fw={500} mb={4}>Y — Energy outcome</Text>
+                    <Text size="xs" fw={500} mb={4}>Y — Energy metric</Text>
                     <Select
                         size="xs"
                         data={ENERGY_Y_OPTIONS}
@@ -137,23 +138,25 @@ export const SocioEnergyScatter = ({
                 </div>
             </Group>
 
-            <ResponsiveContainer width="100%" height={340}>
-                <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
+            <ResponsiveContainer width="100%" height={400}>
+                <ScatterChart margin={{ top: 25, right: 20, bottom: 30, left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis
                         type="number" dataKey="x"
                         name={xLabel}
-                        label={{ value: xLabel, position: 'insideBottom', offset: -15, fontSize: 11, fill: '#868e96' }}
+                        label={{ value: xLabel, position: 'insideBottom', offset: -5, fontSize: 11, fill: '#868e96' }}
                         tick={{ fontSize: 10 }}
+                        padding={{ right: 30}}
                     />
                     <YAxis
                         type="number" dataKey="y"
                         name={yLabel}
-                        label={{ value: yLabel, angle: -90, position: 'insideLeft', fontSize: 11, fill: '#868e96' }}
+                        label={{ value: yLabel, angle: -90, position: 'insideLeft', dy: 40, fontSize: 11, fill: '#868e96' }}
                         tick={{ fontSize: 10 }}
+                        padding={{ top: 30 }}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 15 }} />
 
                     {/* Mean crosshairs */}
                     <ReferenceLine x={avgX} stroke="#adb5bd" strokeDasharray="4 3" strokeWidth={1} />
@@ -179,7 +182,7 @@ export const SocioEnergyScatter = ({
                 </ScatterChart>
             </ResponsiveContainer>
 
-            <Text size="xs" c="dimmed" mt="xs" ta="center">
+            <Text size="xs" c="dimmed" ta="center">
                 Dashed lines = EU average. Hover over a country for details.
             </Text>
         </Paper>

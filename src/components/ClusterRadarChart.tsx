@@ -91,7 +91,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                             strokeDasharray="4 2"
                         />
                     )}
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
                 </RadarChart>
             </ResponsiveContainer>
         </Paper>

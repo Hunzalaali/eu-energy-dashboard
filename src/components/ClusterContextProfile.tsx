@@ -107,8 +107,8 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
             <Box mb="sm">
                 <Title order={5}>Cluster Socioeconomic Context ({year})</Title>
                 <Text size="xs" c="dimmed">
-                    Mean structural context variables per energy cluster — explains <em>why</em> countries group together.
-                    Click a cluster header to filter all views. (Neto-Bradley et al., 2021)
+                    Mean structural context variables per energy cluster explains <em>why</em> countries group together.
+                    Click a cluster header to filter all views.
                 </Text>
             </Box>
 
@@ -117,9 +117,9 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                     <thead>
                         <tr>
                             <th style={{
-                                padding: '6px 10px', textAlign: 'left', fontSize: 11,
-                                color: '#868e96', fontWeight: 500, width: 190,
-                                borderBottom: '1px solid rgba(255,255,255,0.12)',
+                                padding: '8px 12px', textAlign: 'left', fontSize: 13,
+                                color: '#4a4b4cff', fontWeight: 600, width: 220,
+                                borderBottom: '1px solid rgba(100, 94, 94, 0.12)',
                             }}>
                                 Variable
                             </th>
@@ -131,15 +131,15 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                                         onClick={() => toggleCluster(cid)}
                                         style={{
                                             padding: '8px 12px', textAlign: 'center', fontSize: 10,
-                                            borderBottom: '1px solid rgba(255,255,255,0.12)',
+                                            borderBottom: '1px solid rgba(100, 94, 94, 0.12)',
                                             cursor: 'pointer',
                                             opacity: dimmed ? 0.3 : 1,
                                             transition: 'opacity 0.2s',
                                         }}
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-                                            <span style={{ color, fontWeight: 700 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                            <div style={{ width: 12, height: 12, borderRadius: '50%', background: color }} />
+                                            <span style={{ color, fontWeight: 700, fontSize: 12 }}>
                                                 {energyClusterNames[cid] || `C${cid}`}
                                             </span>
                                         </div>
@@ -150,8 +150,8 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                     </thead>
                     <tbody>
                         {SECONDARY_VARS.map(({ key, label, format }) => (
-                            <tr key={key} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                                <td style={{ padding: '8px 10px', fontSize: 11, color: '#adb5bd', fontWeight: 500 }}>
+                            <tr key={key} style={{ borderBottom: '1px solid rgba(131, 122, 122, 0.2)' }}>
+                                <td style={{ padding: '10px 12px', fontSize: 12, color: '#67696cff', fontWeight: 600 }}>
                                     {label}
                                 </td>
                                 {clusterIds.map(cid => {
@@ -176,7 +176,7 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                                             opacity: dimmed ? 0.3 : 1, transition: 'opacity 0.2s',
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                                <Text size="xs" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                                <Text size="sm" fw={700} style={{ fontVariantNumeric: 'tabular-nums', color: '#7e7777ff' }}>
                                                     {format(profile[cid]?.[key] ?? 0)}
                                                 </Text>
                                                 {hasSelectedCountry && selectedCountryData && (
@@ -188,8 +188,8 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                                                 )}
                                             </div>
                                             <div style={{
-                                                width: 64, height: 8, borderRadius: 3,
-                                                background: 'rgba(255,255,255,0.08)', margin: '4px auto 0 auto', overflow: 'visible',
+                                                width: 70, height: 10, borderRadius: 4,
+                                                background: 'rgba(67, 64, 64, 0.08)', margin: '6px auto 0 auto', overflow: 'visible',
                                                 position: 'relative',
                                             }}>
                                                 <div style={{

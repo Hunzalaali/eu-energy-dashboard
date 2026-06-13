@@ -11,8 +11,8 @@ import { useInteraction } from '../context/InteractionContext';
  * Typology Radar Chart
  *
  * Displays the socioeconomic profile of the four 2×2 typology quadrants:
- *   • Affluent Warm   — High GDP, Low HDD
- *   • Affluent Cold   — High GDP, High HDD
+ *   • Wealthy Warm   — High GDP, Low HDD
+ *   • Wealthy Cold   — High GDP, High HDD
  *   • Developing Warm — Low GDP, Low HDD
  *   • Developing Cold — Low GDP, High HDD
  *
@@ -25,8 +25,8 @@ interface TypologyRadarChartProps {
     year: number;
 }
 
-// Fixed colour palette matching the 2×2 quadrant order (IDs 0–3)
-const TYPO_COLORS = ['#4c6ef5', '#f76707', '#2f9e44', '#ae3ec9'];
+// Semantic colour palette matching the 2×2 quadrant order (IDs 0–3)
+const TYPO_COLORS = ['#ff922b', '#339af0', '#c92a2a', '#5f3dc4'];
 const TYPO_NAMES  = ['Wealthy Warm', 'Wealthy Cold', 'Developing Warm', 'Developing Cold'];
 
 const FEATURES = ['gdp_pps', 'mfg_share', 'urb_rate', 'hdd', 'pop_density'] as const;
@@ -139,13 +139,13 @@ export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, ye
                 })}
             </Group>
 
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={320}>
                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                     <PolarGrid />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Tooltip formatter={(value: any) => [`${value} (relative)`, '']} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
                     {presentTypologies.map(name => {
                         const isSelected = selectedTypology === name;
                         const idx = TYPO_NAMES.indexOf(name);
@@ -168,10 +168,6 @@ export const TypologyRadarChart: React.FC<TypologyRadarChartProps> = ({ data, ye
                 based on <em>GDP per capita (PPS)</em> and <em>Heating Degree Days (HDD)</em>, split at the
                 EU-27 median. GDP captures economic capacity for energy transition; HDD captures structural
                 heating demand driven by climate.
-                <br /><br />
-                <em>Note:</em> Unlike energy clusters (which group countries by similar energy profiles and can fluctuate),
-                typologies are based on fixed structural factors (GDP, climate) that change very slowly. This provides
-                a stable reference frame for understanding why countries with similar structural conditions may pursue different energy strategies.
             </Text>
         </Paper>
     );

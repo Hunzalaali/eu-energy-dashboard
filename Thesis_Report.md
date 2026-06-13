@@ -402,6 +402,9 @@ These axes are theoretically grounded: economic capacity determines a country's 
 
 The typology assignment is deterministic and computed once during data loading; the resulting `clusterId` and `clusterName` fields are attached to every row in the dataset regardless of year, enabling cross-temporal typology analysis.
 
+*Methodological Justification:*
+While a secondary multi-variate clustering algorithm could have been applied to the full suite of socioeconomic data (incorporating urbanisation, manufacturing share, and population density), a deterministic 2×2 typology based exclusively on GDP (economic capacity) and HDD (climate demand) was chosen. This provides a transparent, highly interpretable **Structural Control Framework**. It avoids the "black-box" nature of secondary clustering, allowing the remaining variables to be used as independent characterisation metrics to build rich, contextual profiles of each quadrant without algorithmic confounding.
+
 ### 4.3 Frontend Architecture
 
 #### 4.3.1 State Management and CMV Implementation

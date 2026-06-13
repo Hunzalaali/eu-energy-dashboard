@@ -15,8 +15,8 @@ interface TypologyCrossTabProps {
     year: number;
 }
 
-/** Colour palette for the four socioeconomic typologies */
-const TYPO_COLORS = ['#4c6ef5', '#f76707', '#2f9e44', '#ae3ec9'];
+/** Colour palette for the four socioeconomic typologies (Semantic: Warm/Cold tones) */
+const TYPO_COLORS = ['#ff922b', '#339af0', '#c92a2a', '#5f3dc4'];
 
 export const TypologyCrossTab = ({
     typoData, energyData, energyClusterNames, year,
@@ -85,7 +85,7 @@ export const TypologyCrossTab = ({
             <Box mb="md">
                 <Title order={5}>Typology × Energy Cluster Cross-Tab ({year})</Title>
                 <Text size="xs" c="dimmed">
-                    How socioeconomic typologies map onto energy clusters — each cell shows countries at the intersection.
+                    How socioeconomic typologies map onto energy clusters, each cell shows countries at the intersection.
                     Darker cells = more countries in common.
                 </Text>
             </Box>
@@ -95,13 +95,13 @@ export const TypologyCrossTab = ({
                     <thead>
                         <tr>
                             {/* top-left corner */}
-                            <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: '#868e96', fontWeight: 500, borderBottom: '2px solid #dee2e6' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 13, color: '#232426ff', fontWeight: 600, borderBottom: '2px solid rgba(40, 37, 37, 0.1)', borderRight: '2px solid rgba(40, 37, 37, 0.1)' }}>
                                 Typology ↓ / Energy →
                             </th>
                             {energyClusters.map(ec => (
                                 <th key={ec} style={{
-                                    padding: '6px 10px', textAlign: 'center', fontSize: 11,
-                                    borderBottom: '2px solid #dee2e6',
+                                    padding: '8px 12px', textAlign: 'center', fontSize: 12,
+                                    borderBottom: '2px solid rgba(40, 37, 37, 0.1)',
                                 }}>
                                     <div style={{
                                         display: 'inline-block',
@@ -120,8 +120,8 @@ export const TypologyCrossTab = ({
                         {typologyNames.map((typo, typoIdx) => (
                             <tr key={typo}>
                                 <td style={{
-                                    padding: '8px 10px', fontWeight: 600, fontSize: 12,
-                                    borderRight: '2px solid #dee2e6',
+                                    padding: '10px 12px', fontWeight: 700, fontSize: 13,
+                                    borderRight: '2px solid rgba(30, 30, 30, 0.1)',
                                     color: TYPO_COLORS[typoIdx % TYPO_COLORS.length],
                                     whiteSpace: 'nowrap',
                                 }}>
@@ -132,15 +132,15 @@ export const TypologyCrossTab = ({
                                     const count = countries.length;
                                     const intensity = count === 0 ? 0 : 0.08 + (count / Math.max(...Object.values(matrix[typo] ?? {}).map(c => c.length), 1)) * 0.72;
                                     const bgColor = count === 0
-                                        ? '#f8f9fa'
+                                        ? 'rgba(41, 38, 38, 0.02)'
                                         : getClusterColorById(ec, energyClusterNames) + Math.round(intensity * 255).toString(16).padStart(2, '0');
 
                                     const isSelected = selectedCountry && countries.includes(selectedCountry);
 
                                     return (
                                         <td key={ec} style={{
-                                            padding: '6px 8px', textAlign: 'center',
-                                            borderBottom: '1px solid #f1f3f5',
+                                            padding: '10px 12px', textAlign: 'center',
+                                            borderBottom: '2px solid rgba(30, 30, 30, 0.1)',
                                             background: bgColor,
                                             transition: 'all 0.2s',
                                             minWidth: 90,
@@ -165,15 +165,15 @@ export const TypologyCrossTab = ({
                                                 <div style={{ cursor: count > 0 ? 'help' : 'default' }}>
                                                     {count > 0 ? (
                                                         <>
-                                                            <Text fw={700} size="sm" style={{ color: count > 2 ? '#1a1a1a' : '#495057' }}>
+                                                            <Text fw={800} size="md" style={{ color: intensity > 0.5 ? '#ffffff' : '#ffffffff' }}>
                                                                 {count}
                                                             </Text>
-                                                            <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
+                                                            <Text size="xs" style={{ color: intensity > 0.5 ? 'rgba(255, 255, 255, 1)' : '#ffffffff', lineHeight: 1.2 }}>
                                                                 {countries.slice(0, 2).join(', ')}{count > 2 ? ` +${count - 2}` : ''}
                                                             </Text>
                                                         </>
                                                     ) : (
-                                                        <Text size="xs" c="dimmed">—</Text>
+                                                        <Text size="sm" c="dimmed">—</Text>
                                                     )}
                                                 </div>
                                             </Tooltip>
