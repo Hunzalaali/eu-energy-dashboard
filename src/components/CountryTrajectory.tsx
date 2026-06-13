@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Paper, Title, Text, Box, Grid, Group, Tooltip, Badge } from '@mantine/core';
+import { Paper, Title, Text, Box, Grid, Group } from '@mantine/core';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 import { useInteraction } from '../context/InteractionContext';
 import { FEATURES, getMetricLabel, type ClusteredData } from '../services/analysis';
@@ -7,10 +7,9 @@ import { FEATURES, getMetricLabel, type ClusteredData } from '../services/analys
 interface CountryTrajectoryProps {
     /** All years stable clustered dataset */
     data: ClusteredData[];
-    clusterNames?: Record<number, string>;
 }
 
-export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clusterNames }) => {
+export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data }) => {
     const { selectedCountry } = useInteraction();
 
     const countryTimeline = useMemo(() => {
@@ -83,7 +82,7 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data, clus
                                                 }}
                                                 labelStyle={{ fontSize: 9, fontWeight: 700, color: '#94a3b8' }}
                                                 itemStyle={{ fontSize: 10, color: isGood ? '#4ade80' : '#f87171', padding: 0 }}
-                                                formatter={(value: any) => [`${Number(value).toFixed(1)}${f.includes('share') || f.includes('dependency') ? '%' : ''}`, 'Value']}
+                                                formatter={(value: number | string | undefined) => [`${Number(value ?? 0).toFixed(1)}${f.includes('share') || f.includes('dependency') ? '%' : ''}`, 'Value']}
                                             />
                                             <Line 
                                                 type="monotone" 

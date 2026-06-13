@@ -1,35 +1,59 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Paper, Title, Grid, Text, LoadingOverlay, Table, Badge, Group, Divider } from '@mantine/core';
+import { useMemo } from 'react';
+import { Paper, Title, Grid, Text, Table, Badge, Group, Divider } from '@mantine/core';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
-import { calculateClusterMetrics, compareAlgorithms, type EnergyData, type AlgorithmComparison } from '../services/analysis';
+import { calculateClusterMetrics, compareAlgorithms, assignClusterNamesZScore, type EnergyData, type AlgorithmComparison, type ClusteredData } from '../services/analysis';
+import { getClusterColorById } from '../utils/clusterColors';
 
 interface MethodologyViewProps {
     data: EnergyData[];
     year: number;
 }
 
+type AlgorithmComparisonWithNames = AlgorithmComparison & {
+    ephemeralNames?: Record<number, string>;
+};
+
+const alignClusterIdsByMajority = (source: number[], target: number[]): Record<number, number> => {
+    const votes: Record<number, Record<number, number>> = {};
+
+    source.forEach((sourceClusterId, idx) => {
+        const targetClusterId = target[idx];
+        if (sourceClusterId < 0 || targetClusterId < 0) return;
+
+        votes[sourceClusterId] ??= {};
+        votes[sourceClusterId][targetClusterId] = (votes[sourceClusterId][targetClusterId] ?? 0) + 1;
+    });
+
+    const mapping: Record<number, number> = {};
+    Object.entries(votes).forEach(([sourceClusterId, targetVotes]) => {
+        const winner = Object.entries(targetVotes).sort((a, b) => {
+            if (b[1] !== a[1]) return b[1] - a[1];
+            return Number(a[0]) - Number(b[0]);
+        })[0];
+        if (winner) mapping[Number(sourceClusterId)] = Number(winner[0]);
+    });
+
+    return mapping;
+};
+
 export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
-    const [metrics, setMetrics] = useState<{ k: number; inertia: number; silhouette: number; dbi: number; ch: number }[]>([]);
-    const [comparison, setComparison] = useState<AlgorithmComparison[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            const results = calculateClusterMetrics(data, year, [2, 3, 4, 5, 6, 7, 8]);
-            setMetrics(results);
-
-            const algoComparison = compareAlgorithms(data, year, 4);
-            setComparison(algoComparison);
-
-            setLoading(false);
-        }, 100);
+    const metrics = useMemo(() => {
+        return calculateClusterMetrics(data, year, [2, 3, 4, 5, 6, 7, 8]);
     }, [data, year]);
+
+    const comparison = useMemo(() => {
+        return compareAlgorithms(data, year, 4);
+    }, [data, year]);
+
+    const countryByName = useMemo(() => {
+        return new Map(data.map(row => [row.country, row]));
+    }, [data]);
 
     // Find the best algorithm for each metric
     const bestAlgo = useMemo(() => {
         if (comparison.length === 0) return {};
         const validComparisons = comparison.filter(c => c.k > 1);
+        if (validComparisons.length === 0) return {};
         return {
             silhouette: validComparisons.reduce((best, c) => c.silhouette > best.silhouette ? c : best, validComparisons[0])?.algorithm,
             dbi: validComparisons.reduce((best, c) => c.dbi < best.dbi && c.dbi > 0 ? c : best, validComparisons[0])?.algorithm,
@@ -37,16 +61,68 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
         };
     }, [comparison]);
 
+    // Dynamically assign semantic names to the on-the-fly clusters based on their actual mathematical centroids
+    const mappedComparison = useMemo<AlgorithmComparisonWithNames[]>(() => {
+        if (comparison.length === 0) return [];
+
+        return comparison.map(algo => {
+            // Build ClusteredData for this specific algorithm run
+            const algoData: ClusteredData[] = algo.labels
+                .map((country, idx) => {
+                    const countryData = countryByName.get(country);
+                    if (!countryData) return null;
+                    return {
+                        ...countryData,
+                        cluster: algo.assignments[idx]
+                    } as ClusteredData;
+                })
+                .filter((row): row is ClusteredData => row !== null);
+
+            // Evaluate the true semantic name for these ephemeral clusters
+            const ephemeralNames = algoData.length > 0 ? assignClusterNamesZScore(algoData) : {};
+
+            return {
+                ...algo,
+                ephemeralNames
+            };
+        });
+    }, [comparison, countryByName]);
+
+    const kMeansVsHierAgreementByCountry = useMemo<Record<string, boolean>>(() => {
+        const kMeans = mappedComparison.find(algo => algo.algorithm.toLowerCase().includes('k-means'));
+        const hierarchical = mappedComparison.find(algo => algo.algorithm.toLowerCase().includes('hierarchical'));
+        if (!kMeans || !hierarchical) return {};
+        if (kMeans.labels.length !== hierarchical.labels.length) return {};
+
+        const hierarchicalToKMeans = alignClusterIdsByMajority(hierarchical.assignments, kMeans.assignments);
+        const alignedHierByCountry = new Map<string, number>();
+
+        hierarchical.labels.forEach((country, idx) => {
+            const raw = hierarchical.assignments[idx];
+            const aligned = raw >= 0 && hierarchicalToKMeans[raw] !== undefined
+                ? hierarchicalToKMeans[raw]
+                : raw;
+            alignedHierByCountry.set(country, aligned);
+        });
+
+        const result: Record<string, boolean> = {};
+        kMeans.labels.forEach((country, idx) => {
+            const hierCluster = alignedHierByCountry.get(country);
+            result[country] = hierCluster !== undefined && kMeans.assignments[idx] === hierCluster;
+        });
+
+        return result;
+    }, [mappedComparison]);
+
     return (
         <Grid>
-            <LoadingOverlay visible={loading} />
 
             {/* Title Section */}
             <Grid.Col span={12}>
                 <Title order={2} mb="xs">Methodology Validation</Title>
                 <Text size="sm" c="dimmed" mb="md">
                     Systematic evaluation of clustering algorithms and parameter selection for EU-27 energy profile typologies ({year}).
-                    Following Chicco (2012) and Anđelinović et al. (2026), we compare multiple algorithms across four validation metrics.
+                    We compare multiple algorithms across four distinct validation metrics to ensure mathematical robustness.
                 </Text>
             </Grid.Col>
 
@@ -117,40 +193,53 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                     <Title order={4} mb="xs">Cluster Membership Comparison</Title>
                     <Text size="xs" c="dimmed" mb="md">
                         How each algorithm assigns countries to clusters. Disagreements between algorithms highlight borderline cases.
+                        Agreement is evaluated between K-Means and Hierarchical after cluster-label alignment.
                     </Text>
-                    {comparison.length > 0 && (
+                    {mappedComparison.length > 0 && (
                         <Table striped highlightOnHover withTableBorder withColumnBorders fz="xs">
                             <Table.Thead>
                                 <Table.Tr>
                                     <Table.Th>Country</Table.Th>
-                                    {comparison.map(algo => (
+                                    {mappedComparison.map(algo => (
                                         <Table.Th key={algo.algorithm}>{algo.algorithm}</Table.Th>
                                     ))}
                                     <Table.Th>Agreement</Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
-                                {comparison[0]?.labels.map((country, idx) => {
-                                    const assignments = comparison.map(algo => algo.assignments[idx]);
-                                    // Check if all agree (comparing K-Means and Hierarchical only — DBSCAN may have different K)
-                                    const kmeansAndHier = assignments.slice(0, 2);
-                                    const agree = kmeansAndHier.every(a => a === kmeansAndHier[0]);
+                                {mappedComparison[0]?.labels.map((country, idx) => {
+                                    const assignments = mappedComparison.map(algo => algo.assignments[idx]);
+                                    const agree = kMeansVsHierAgreementByCountry[country];
                                     return (
-                                        <Table.Tr key={country} bg={agree ? undefined : 'var(--mantine-color-yellow-0)'}>
+                                        <Table.Tr key={country} bg={agree === false ? 'rgba(255, 146, 43, 0.1)' : undefined}>
                                             <Table.Td fw={600}>{country}</Table.Td>
-                                            {assignments.map((a, i) => (
-                                                <Table.Td key={i}>
-                                                    <Badge
-                                                        size="sm"
-                                                        color={a === -1 ? 'gray' : ['indigo', 'teal', 'orange', 'red', 'grape', 'cyan'][a % 6]}
-                                                        variant="light"
-                                                    >
-                                                        {a === -1 ? 'Noise' : `C${a}`}
-                                                    </Badge>
-                                                </Table.Td>
-                                            ))}
+                                            {assignments.map((a, i) => {
+                                                const algo = mappedComparison[i];
+                                                const label = a === -1 ? 'Noise' : (algo.ephemeralNames?.[a] || `C${a}`);
+                                                // We want the color to match the semantic string exactly
+                                                const color = a === -1 ? '#868e96' : getClusterColorById(a, algo.ephemeralNames);
+                                                
+                                                return (
+                                                    <Table.Td key={i}>
+                                                        <Badge
+                                                            size="xs"
+                                                            variant="light"
+                                                            style={{
+                                                                backgroundColor: color + '22',
+                                                                color: color,
+                                                                border: `1px solid ${color}44`,
+                                                                textTransform: 'none'
+                                                            }}
+                                                        >
+                                                            {label}
+                                                        </Badge>
+                                                    </Table.Td>
+                                                );
+                                            })}
                                             <Table.Td>
-                                                {agree ? (
+                                                {agree === undefined ? (
+                                                    <Badge size="xs" color="gray" variant="light">N/A</Badge>
+                                                ) : agree ? (
                                                     <Badge size="xs" color="green" variant="light">✓ Agree</Badge>
                                                 ) : (
                                                     <Badge size="xs" color="orange" variant="light">Divergent</Badge>
@@ -171,7 +260,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
 
             {/* Elbow Method */}
             <Grid.Col span={6}>
-                <Paper shadow="xs" p="md" withBorder h={400}>
+                <Paper shadow="xs" p="md" withBorder h={420}>
                     <Title order={4} mb="xs">Elbow Method (Inertia / WCSS)</Title>
                     <Text size="xs" c="dimmed" mb="md">
                         Within-Cluster Sum of Squares. The "elbow" at K=4 indicates diminishing returns from additional clusters.
@@ -182,7 +271,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                             <XAxis dataKey="k" label={{ value: 'Number of clusters (K)', position: 'insideBottom', offset: -5 }} />
                             <YAxis label={{ value: 'Inertia (WCSS)', angle: -90, position: 'insideLeft' }} />
                             <Tooltip />
-                            <Line type="monotone" dataKey="inertia" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
+                            <Line type="monotone" dataKey="inertia" stroke="#845ef7" strokeWidth={2} dot={{ r: 4 }} />
                             <ReferenceLine x={4} stroke="red" strokeDasharray="3 3" label={{ value: 'K=4', fill: 'red', position: 'top' }} />
                         </LineChart>
                     </ResponsiveContainer>
@@ -191,7 +280,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
 
             {/* Silhouette */}
             <Grid.Col span={6}>
-                <Paper shadow="xs" p="md" withBorder h={400}>
+                <Paper shadow="xs" p="md" withBorder h={420}>
                     <Title order={4} mb="xs">Silhouette Analysis</Title>
                     <Text size="xs" c="dimmed" mb="md">
                         Measures cluster cohesion vs. separation (Rousseeuw, 1987). Score range: [-1, 1]. Higher = better separation.
@@ -202,7 +291,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                             <XAxis dataKey="k" label={{ value: 'Number of clusters (K)', position: 'insideBottom', offset: -5 }} />
                             <YAxis domain={[-0.2, 0.8]} />
                             <Tooltip />
-                            <Bar dataKey="silhouette" fill="#82ca9d" />
+                            <Bar dataKey="silhouette" fill="#20c997" />
                             <ReferenceLine y={0} stroke="#000" />
                             <ReferenceLine x={4} stroke="red" strokeDasharray="3 3" />
                         </BarChart>
@@ -212,7 +301,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
 
             {/* Davies-Bouldin Index */}
             <Grid.Col span={6}>
-                <Paper shadow="xs" p="md" withBorder h={400}>
+                <Paper shadow="xs" p="md" withBorder h={420}>
                     <Title order={4} mb="xs">Davies-Bouldin Index</Title>
                     <Text size="xs" c="dimmed" mb="md">
                         Average cluster similarity ratio (Davies & Bouldin, 1979). Lower values indicate better-separated clusters.
@@ -232,7 +321,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
 
             {/* Calinski-Harabasz Index */}
             <Grid.Col span={6}>
-                <Paper shadow="xs" p="md" withBorder h={400}>
+                <Paper shadow="xs" p="md" withBorder h={420}>
                     <Title order={4} mb="xs">Calinski-Harabasz Index</Title>
                     <Text size="xs" c="dimmed" mb="md">
                         Variance ratio criterion (Calinski & Harabasz, 1974). Higher values indicate better-defined, well-separated clusters.
@@ -260,8 +349,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                     <Text size="sm" component="div">
                         <ol style={{ paddingLeft: '1.2rem', margin: 0 }}>
                             <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>K=4 is supported</strong> by the Elbow Method (inertia plateau), Silhouette score,
-                                and DBI minimum, providing convergent evidence for this partition.
+                                <strong>K=4 is identified as the optimal macro-partition</strong> through triangulated evidence: an inflection point in the Elbow Method, a local maximum in Silhouette score, and an inflection of diminishing returns in the Davies-Bouldin Index. This convergence justifies K=4 over overly simplistic (K=2) or highly fragmented (K=8) typologies.
                             </li>
                             <li style={{ marginBottom: '0.5rem' }}>
                                 <strong>K-Means and Ward's hierarchical clustering</strong> produce similar groupings,
@@ -277,12 +365,11 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                             </li>
                             <li style={{ marginTop: '0.5rem' }}>
                                 <strong>Temporal stability via multi-year consensus centroids</strong>: instead of
-                                clustering each year independently (which produces unstable label permutations due to
-                                random initialisation), centroids are built from each country's <em>average</em> feature
+                                clustering each year independently (which causes shifting definitions of what constitutes a cluster year-over-year), centroids are established using each country's <em>average</em> feature
                                 vector across all years (2010–2023). Per-year assignments are then made by nearest-centroid
-                                projection. This ensures a country only changes cluster when its actual energy profile
-                                drifts structurally — not due to algorithmic noise. The <em>Time Series → Cluster Stability</em> chart
-                                visualises this: fewer than 1 country switches cluster per year on average.
+                                projection. This establishes a fixed coordinate system for the transition, ensuring a country only changes cluster when its actual energy profile
+                                structurally evolves — rather than the cluster boundaries moving around it. The <em>Temporal Trajectories</em> view
+                                visualises this structural stability.
                             </li>
                         </ol>
                     </Text>

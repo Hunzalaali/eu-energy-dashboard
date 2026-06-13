@@ -188,7 +188,6 @@ const getCountryRollingFeatures = (
 export const performStableAnalysis = (
     data: EnergyData[],
     year: number,
-    _k: number = 4,
     stableCentroids: number[][],
     /** Set true when you only need cluster assignments (skips UMAP — much faster) */
     skipUMAP: boolean = false,

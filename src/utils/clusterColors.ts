@@ -12,16 +12,6 @@
 
 /** Exact-match colour map — checked first */
 const EXACT_COLORS: Record<string, string> = {
-    // --- assignClusterNames names ---
-    'Green Pioneers':     '#2f9e44', // Forest green  – high renewables
-    'Nuclear Core':       '#7048e8', // Violet         – nuclear-dominated
-    'Fossil Dependent':   '#7c5c3a', // Brown           – heavy fossil use
-    'Import Dependent':   '#e67700', // Amber/orange   – energy dependency
-    'Carbon Intensive':   '#c92a2a', // Deep red        – high GHG intensity
-    'High Intensity':     '#f59f00', // Yellow-amber    – high energy intensity
-    'Mixed Profile':      '#495057', // Dark slate      – no clear signal
-    'Empty':              '#adb5bd', // Light grey      – empty cluster
-
     // --- assignClusterNamesZScore names (simple single-feature) ---
     'Green':              '#40c057', // Bright green
     'Low-Renewable':      '#495057', // Dark slate/grey

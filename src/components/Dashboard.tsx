@@ -70,10 +70,10 @@ const DashboardInner = () => {
         if (!data || data.length === 0 || stableCentroids.length === 0) return [];
         const years = Array.from(new Set(data.map(d => d.year))).sort();
         const results: ClusteredData[] = [];
-        let previousAssignments: Record<string, number> = {};
+        const previousAssignments: Record<string, number> = {};
 
         years.forEach(y => {
-            const clustered = performStableAnalysis(data, y, 4, stableCentroids, true, previousAssignments);
+            const clustered = performStableAnalysis(data, y, stableCentroids, true, previousAssignments);
             results.push(...clustered);
             clustered.forEach(c => {
                 previousAssignments[c.country] = c.cluster;
@@ -95,7 +95,7 @@ const DashboardInner = () => {
             }
         });
 
-        return performStableAnalysis(data || [], year, 4, stableCentroids, false, prevAssignments);
+        return performStableAnalysis(data || [], year, stableCentroids, false, prevAssignments);
     }, [data, year, stableCentroids, allYearsClusteredData]);
 
     // ── Stability stats for KPI row ──────────────────────────────────────────
@@ -471,7 +471,7 @@ const DashboardInner = () => {
                         </div>
                         {/* Row 3: Country Temporal Sparklines and Timeline (Only really relevant if a country is selected) */}
                         <div style={{ marginBottom: 16 }}>
-                            <CountryTrajectory data={allYearsClusteredData} clusterNames={clusterNames} />
+                            <CountryTrajectory data={allYearsClusteredData} />
                         </div>
 
                         {/* Row 1: Transition flow — full width timeline */}
@@ -488,10 +488,6 @@ const DashboardInner = () => {
                 {/* ════════════════ METHODOLOGY ════════════════ */}
                 {view === 'methodology' && (
                     <>
-                        <div className="page-header">
-                            <h1>How It Works</h1>
-                            <p>Behind the scenes: how countries are grouped, which algorithm is used, and how we validate the results</p>
-                        </div>
                         <MethodologyView data={data} year={year} />
                     </>
                 )}
