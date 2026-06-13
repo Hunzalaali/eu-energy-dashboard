@@ -46,13 +46,13 @@ const KEYWORD_COLORS: Array<{ keywords: string[]; color: string }> = [
     // 0. Catch positive "post-fossil" before it gets snagged by the negative "fossil" rule
     { keywords: ['post-fossil', 'low-carbon'],                                        color: '#2f9e44' }, // Dark forest green
 
-    // 1. Check for negative/fossil descriptors FIRST so they aren't masked by 'renewable'
-    { keywords: ['fossil-reliant', 'fossil dependent', 'low-renewable'],              color: '#868e96' }, // Muted grey/slate
-    { keywords: ['carbon', 'carbon-intensive'],                                       color: '#c92a2a' }, // Deep red
-    { keywords: ['fossil'],                                                           color: '#7c5c3a' }, // Brown
-
-    // 2. Specific clusters
+    // 1. Specific energy sources (Nuclear wins over secondary descriptors)
     { keywords: ['nuclear'],                                                          color: '#7048e8' }, // Violet
+
+    // 2. Check for negative/fossil descriptors so they aren't masked by 'renewable'
+    { keywords: ['carbon', 'carbon-intensive'],                                       color: '#c92a2a' }, // Deep red
+    { keywords: ['fossil-reliant', 'fossil reliant', 'fossil dependent', 'fossil'],   color: '#7c5c3a' }, // Brown
+    { keywords: ['low-renewable'],                                                    color: '#868e96' }, // Muted grey/slate
     
     // 3. Moderate / Diversified (Make this BLUE instead of green for diversity)
     { keywords: ['moderate renewable', 'moderate-renewable', 'diversified'],           color: '#228be6' }, // Distinct bright blue
