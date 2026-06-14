@@ -30,7 +30,6 @@ import { HeatmapChart } from './HeatmapChart';
 import { CountryDetailPanel } from './CountryDetailPanel';
 import { DendrogramChart } from './DendrogramChart';
 import { ClusterContextProfile } from './ClusterContextProfile';
-import { PCABiplot } from './PCABiplot';
 import { CountryTrajectory } from './CountryTrajectory';
 
 const METRICS: string[] = [
@@ -55,8 +54,6 @@ const DashboardInner = () => {
     const [metric, setMetric] = useState<string>('renewable_share');
     const [mapMode, setMapMode] = useState<string>('cluster');
     const [view, setView] = useState<string>('overview');
-    const [pcaExpanded, setPcaExpanded] = useState<boolean>(false);
-
     const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry } = useInteraction();
 
     // ── Stable centroids: computed once from all-years country averages ────────
@@ -366,38 +363,6 @@ const DashboardInner = () => {
                             <DendrogramChart data={analyzedData} k={4} clusterNames={clusterNames} />
                         </div>
 
-                        {/* Row 4: Collapsible Advanced PCA Biplot */}
-                        <div className="chart-card">
-                            <div
-                                onClick={() => setPcaExpanded(!pcaExpanded)}
-                                style={{
-                                    cursor: 'pointer',
-                                    padding: '12px 16px',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: 6,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    border: '1px solid rgba(255,255,255,0.06)',
-                                    userSelect: 'none',
-                                    transition: 'background 0.2s',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                            >
-                                <span style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}>
-                                    {pcaExpanded ? '▼ Hide Advanced PCA Analysis' : '▶ Show Advanced PCA Analysis (Dimensionality Reduction)'}
-                                </span>
-                                <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                                    Principal Component Analysis biplot and feature loading contributions
-                                </span>
-                            </div>
-                            {pcaExpanded && (
-                                <div style={{ marginTop: 12 }}>
-                                    <PCABiplot data={analyzedData} energyClusterNames={clusterNames} />
-                                </div>
-                            )}
-                        </div>
                     </>
                 )}
 
