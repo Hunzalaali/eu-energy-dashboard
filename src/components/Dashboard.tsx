@@ -119,6 +119,7 @@ const DashboardInner = () => {
     }, [allYearsClusteredData]);
 
     // ── Sectoral data ─────────────────────────────────────────────────────────
+    const { data: euSectoralData } = useSectoralData(null);
     const { data: sectoralData } = useSectoralData(selectedCountry);
     const { data: compareSectoralData } = useSectoralData(compareCountry);
 
@@ -219,7 +220,7 @@ const DashboardInner = () => {
                             <p>Explore how 27 European countries produce and consume energy and how that has changed from 2010 to {year}</p>
                         </div>
 
-                        <KPIRow data={analyzedData} sectoralData={sectoralData} year={year} stabilityStats={stabilityStats} />
+                        <KPIRow data={analyzedData} sectoralData={euSectoralData} year={year} stabilityStats={stabilityStats} />
 
                         {/* Map Row */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
