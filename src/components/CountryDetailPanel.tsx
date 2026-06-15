@@ -3,6 +3,7 @@ import { IconX, IconLeaf, IconFlame, IconBolt, IconTarget, IconTrendingDown } fr
 import { type ClusteredData, FEATURES, getMetricLabel } from '../services/analysis';
 import { type SectoralDataWithTargets } from '../data/useSectoralData';
 import { useInteraction } from '../context/InteractionContext';
+import { formatCountryName } from './MapChart';
 
 interface CountryDetailPanelProps {
     data: ClusteredData[];
@@ -59,7 +60,7 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
         >
             <Group justify="space-between" mb="sm">
                 <Group gap="xs">
-                    <Title order={4}>{effectiveCountry}</Title>
+                    <Title order={4}>{formatCountryName(effectiveCountry)}</Title>
                     <Badge
                         size="sm"
                         color={['red', 'indigo', 'blue', 'green'][countryData.cluster % 4]}

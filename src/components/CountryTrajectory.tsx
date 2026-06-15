@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Paper, Title, Text, Box, Grid, Group } from '@mantine/core';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 import { useInteraction } from '../context/InteractionContext';
+import { formatCountryName } from './MapChart';
 import { FEATURES, getMetricLabel, type ClusteredData } from '../services/analysis';
 
 interface CountryTrajectoryProps {
@@ -30,7 +31,7 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data }) =>
     if (countryTimeline.length === 0) {
         return (
             <Paper shadow="xs" p="md" withBorder>
-                <Text c="dimmed" size="sm">No historical data available for {selectedCountry}.</Text>
+                <Text c="dimmed" size="sm">No historical data available for {formatCountryName(selectedCountry)}.</Text>
             </Paper>
         );
     }
@@ -39,9 +40,9 @@ export const CountryTrajectory: React.FC<CountryTrajectoryProps> = ({ data }) =>
         <Paper shadow="xs" p="md" withBorder>
             <Group justify="space-between" mb="md" align="flex-start">
                 <div>
-                    <Title order={4} mb={2}>Temporal Journey: {selectedCountry}</Title>
+                    <Title order={4} mb={2}>Temporal Journey: {formatCountryName(selectedCountry)}</Title>
                     <Text size="xs" c="dimmed">
-                        A detailed view of how {selectedCountry}'s energy profile evolved from 2010 to 2023.
+                        A detailed view of how {formatCountryName(selectedCountry)}'s energy profile evolved from 2010 to 2023.
                     </Text>
                 </div>
             </Group>

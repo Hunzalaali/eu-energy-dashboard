@@ -7,6 +7,7 @@ import {
 import { type ClusteredData } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
 import { useInteraction } from '../context/InteractionContext';
+import { formatCountryName } from './MapChart';
 
 /**
  * Transition Flow Chart — Cluster Evolution Visualization
@@ -132,9 +133,9 @@ const SwimlaneView = ({
         <Paper shadow="xs" p="md" withBorder h="100%">
             <Group justify="space-between" mb={4} align="flex-start">
                 <div>
-                    <Title order={4}>Cluster Transition Path: {selectedCountry}</Title>
+                    <Title order={4}>Cluster Transition Path: {formatCountryName(selectedCountry)}</Title>
                     <Text size="xs" c="dimmed">
-                        Each row is an energy cluster. The line traces which cluster {selectedCountry} belonged to each year.
+                        Each row is an energy cluster. The line traces which cluster {formatCountryName(selectedCountry)} belonged to each year.
                         A curve means the country moved to a different energy cluster that year.
                     </Text>
                 </div>

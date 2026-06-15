@@ -4,6 +4,7 @@ import { Paper, Title, Text } from '@mantine/core';
 import { type ClusteredData, getClusterCentroids, normalizeForRadar, FEATURES, getMetricLabel } from '../services/analysis';
 import { useInteraction } from '../context/InteractionContext';
 import { getClusterColorById } from '../utils/clusterColors';
+import { formatCountryName } from './MapChart';
 
 interface ClusterRadarChartProps {
     data: ClusteredData[];
@@ -57,7 +58,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
             <Title order={4} mb={4}>Energy Fingerprints by Cluster</Title>
             <Text size="xs" c="dimmed" mb="sm">
                 {(selectedCountry || hoveredCountry)
-                    ? `Comparing ${selectedCountry || hoveredCountry} (dashed red) against each cluster's average shape`
+                    ? `Comparing ${formatCountryName(selectedCountry || hoveredCountry)} (dashed red) against each cluster's average shape`
                     : 'Each shape shows the average energy mix of a cluster. A wider shape = higher values across all indicators.'}
             </Text>
             <ResponsiveContainer width="100%" height={280}>
@@ -82,7 +83,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                     {/* Country overlay line */}
                     {countryOverlay && (
                         <Radar
-                            name={selectedCountry || hoveredCountry || 'Country'}
+                            name={formatCountryName(selectedCountry || hoveredCountry) || 'Country'}
                             dataKey="Selected Country"
                             stroke="#e03131"
                             fill="#e03131"

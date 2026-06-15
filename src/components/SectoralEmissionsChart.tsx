@@ -2,6 +2,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Paper, Title, Text, Box } from '@mantine/core';
 import type { SectoralDataWithTargets } from '../data/useSectoralData';
+import { formatCountryName } from './MapChart';
 
 interface SectoralEmissionsChartProps {
     data: SectoralDataWithTargets[];
@@ -24,7 +25,7 @@ export const SectoralEmissionsChart = ({ data, selectedCountry, highlightedSecto
             <Box mb="sm">
                 <Title order={5}>Sectoral Emissions Breakdown</Title>
                 <Text size="xs" c="dimmed">
-                    {selectedCountry ? `Decarbonization pathway for ${selectedCountry}` : 'EU Aggregate Approximation'} (2010–2023)
+                    {selectedCountry ? `Decarbonization pathway for ${formatCountryName(selectedCountry)}` : 'EU Aggregate Approximation'} (2010–2023)
                 </Text>
             </Box>
 

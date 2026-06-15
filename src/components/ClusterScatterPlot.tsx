@@ -4,6 +4,7 @@ import { Paper, Title, Text, Group } from '@mantine/core';
 import { type ClusteredData } from '../services/analysis';
 import { useInteraction } from '../context/InteractionContext';
 import { getClusterColorById } from '../utils/clusterColors';
+import { formatCountryName } from './MapChart';
 
 interface ClusterScatterPlotProps {
     data: ClusteredData[];
@@ -34,7 +35,7 @@ export const ClusterScatterPlot = ({ data, method = 'umap', clusterNames }: Clus
             </Group>
             <Text size="xs" c="dimmed" mb="md">
                 Each dot is a country. Countries with similar energy profiles are placed closer together.
-                {(hoveredCountry || selectedCountry) ? ` Highlighting: ${hoveredCountry || selectedCountry}.` : ` Click a dot to select a country.`}
+                {(hoveredCountry || selectedCountry) ? ` Highlighting: ${formatCountryName(hoveredCountry || selectedCountry)}.` : ` Click a dot to select a country.`}
             </Text>
 
             <ResponsiveContainer width="100%" height={300}>
@@ -49,7 +50,7 @@ export const ClusterScatterPlot = ({ data, method = 'umap', clusterNames }: Clus
                                 const d = payload[0].payload;
                                 return (
                                     <Paper p="xs" shadow="xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
-                                        <Text fw={700} size="sm" c="dark">{d.country}</Text>
+                                        <Text fw={700} size="sm" c="dark">{formatCountryName(d.country)}</Text>
                                         <Text size="xs" c="dimmed">Cluster: {clusterNames?.[d.cluster] ?? `Cluster ${d.cluster}`}</Text>
                                     </Paper>
                                 );

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Paper, Title, Text, Box } from '@mantine/core';
 import type { EnergyData } from '../data/useEnergyData';
+import { formatCountryName } from './MapChart';
 
 interface EnergyMixChartProps {
     data: EnergyData[];
@@ -44,7 +45,7 @@ export const EnergyMixChart = ({ data, selectedCountry }: EnergyMixChartProps) =
             <Box mb="sm">
                 <Title order={5}>Energy Mix Transition</Title>
                 <Text size="xs" c="dimmed">
-                    Share of Fossil vs Renewable vs Nuclear (%) {selectedCountry ? `for ${selectedCountry}` : 'for EU-27'}
+                    Share of Fossil vs Renewable vs Nuclear (%) {selectedCountry ? `for ${formatCountryName(selectedCountry)}` : 'for EU-27'}
                 </Text>
             </Box>
 

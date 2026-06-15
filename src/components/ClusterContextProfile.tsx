@@ -4,6 +4,7 @@ import type { EnergyData } from '../data/useEnergyData';
 import type { ClusteredData } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
 import { useInteraction } from '../context/InteractionContext';
+import { formatCountryName } from './MapChart';
 
 /**
  * Cluster Socioeconomic Context Profile
@@ -180,7 +181,7 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                                                     {format(profile[cid]?.[key] ?? 0)}
                                                 </Text>
                                                 {hasSelectedCountry && selectedCountryData && (
-                                                    <Tooltip label={`${selectedCountry}: ${selectedCountryValueStr}`}>
+                                                    <Tooltip label={`${formatCountryName(selectedCountry!)}: ${selectedCountryValueStr}`}>
                                                         <Badge size="xs" color="orange" variant="filled" style={{ fontSize: 9, padding: '0 4px', height: 14 }}>
                                                             {selectedCountry}
                                                         </Badge>
@@ -198,7 +199,7 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
                                                     transition: 'width 0.5s ease',
                                                 }} />
                                                 {hasSelectedCountry && selectedCountryData && (
-                                                    <Tooltip label={`${selectedCountry}: ${selectedCountryValueStr}`}>
+                                                    <Tooltip label={`${formatCountryName(selectedCountry!)}: ${selectedCountryValueStr}`}>
                                                         <div style={{
                                                             position: 'absolute',
                                                             left: `calc(${selectedCountryPct}% - 4px)`,

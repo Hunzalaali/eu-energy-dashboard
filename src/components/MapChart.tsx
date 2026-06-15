@@ -34,6 +34,13 @@ export const ISO_TO_NAME: { [key: string]: string } = Object.fromEntries(
     Object.entries(NAME_TO_ISO).map(([k, v]) => [v, k])
 );
 
+export const formatCountryName = (iso: string | null | undefined): string => {
+    if (!iso) return '';
+    if (iso === 'EU-27' || iso === 'EU') return `European Union (${iso})`;
+    const name = ISO_TO_NAME[iso];
+    return name ? `${name} (${iso})` : iso;
+};
+
 const COLOR_SCALES: Record<string, string[]> = {
     blue: ["#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b"],
     green: ["#f7fcf5", "#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#41ab5d", "#238b45", "#006d2c", "#00441b"],

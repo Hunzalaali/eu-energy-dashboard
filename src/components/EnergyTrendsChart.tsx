@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Paper, Title, Text } from '@mantine/core';
 import { type EnergyData, type ClusteredData, getMetricLabel } from '../services/analysis';
 import { getClusterColorById } from '../utils/clusterColors';
+import { formatCountryName } from './MapChart';
 
 interface EnergyTrendsChartProps {
     data: EnergyData[];
@@ -39,7 +40,7 @@ export const EnergyTrendsChart = ({
             // Selected country line
             if (selectedCountry) {
                 const countryEntry = yearData.find(d => d.country === selectedCountry);
-                if (countryEntry) entry[selectedCountry] = Number(countryEntry[metric]);
+                if (countryEntry) entry[formatCountryName(selectedCountry)] = Number(countryEntry[metric]);
             }
 
             // Per-cluster average lines (from stable clustered data)
@@ -66,7 +67,7 @@ export const EnergyTrendsChart = ({
             <Title order={4} mb="xs">Temporal Evolution: {getMetricLabel(metric)}</Title>
             <Text size="xs" c="dimmed" mb="md">
                 Dashed cluster averages show how each typology group evolved.
-                {selectedCountry ? ` Solid line = ${selectedCountry}.` : ' Select a country in the sidebar to highlight it.'}
+                {selectedCountry ? ` Solid line = ${formatCountryName(selectedCountry)}.` : ' Select a country in the sidebar to highlight it.'}
             </Text>
 
             <ResponsiveContainer width="100%" height={300}>
@@ -100,7 +101,7 @@ export const EnergyTrendsChart = ({
                     {/* Selected country — bold foreground */}
                     {selectedCountry && (
                         <Line
-                            type="monotone" dataKey={selectedCountry}
+                            type="monotone" dataKey={formatCountryName(selectedCountry)}
                             stroke="#ffd43b" strokeWidth={3} activeDot={{ r: 7 }}
                         />
                     )}
