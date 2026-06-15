@@ -256,7 +256,7 @@ export const HeatmapChart = ({ data, clusterNames }: HeatmapChartProps) => {
                                     y={y + cellH / 2 + 4}
                                     textAnchor="end"
                                     fontSize={10.5}
-                                    fill={isHovered || isSelected ? '#4c6ef5' : '#e2e8f0'}
+                                    fill={isHovered || isSelected ? '#4c6ef5' : '#252527ff'}
                                     fontWeight={isHovered || isSelected ? 700 : 500}
                                     opacity={opacity}
                                 >
