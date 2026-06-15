@@ -21,6 +21,16 @@ const FEATURE_ICONS: Record<string, any> = {
     energy_intensity: IconBolt,
 };
 
+const FEATURE_COLORS: Record<string, string> = {
+    renewable_share: 'teal',
+    fossil_share: 'red',
+    nuclear_share: 'violet',
+    energy_dependency: 'orange',
+    ghg_intensity: 'red',
+    energy_intensity: 'orange',
+    per_capita_toe: 'blue',
+};
+
 export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCode, onClose }: CountryDetailPanelProps) => {
     const { selectedCountry, setSelectedCountry } = useInteraction();
     const effectiveCountry = countryCode !== undefined ? countryCode : selectedCountry;
@@ -39,7 +49,8 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
         const values = data.map(d => Number(d[f]) || 0).sort((a, b) => a - b);
         const val = Number(countryData[f]) || 0;
         const rank = values.filter(v => v <= val).length;
-        percentiles[f] = Math.round((rank / values.length) * 100);
+        // If the value is exactly 0, the bar should be empty regardless of ties
+        percentiles[f] = val === 0 ? 0 : Math.round((rank / values.length) * 100);
     });
 
     return (
@@ -83,7 +94,7 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
                                 value={pct}
                                 size="sm"
                                 radius="xl"
-                                color={pct > 75 ? 'teal' : pct > 40 ? 'blue' : 'orange'}
+                                color={FEATURE_COLORS[f] || 'blue'}
                             />
                         </div>
                     );
