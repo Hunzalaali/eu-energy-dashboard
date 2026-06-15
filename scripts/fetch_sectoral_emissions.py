@@ -224,10 +224,18 @@ def generate_fallback_data():
             
             result[country][year] = {}
             
+            # Calculate raw sectoral shares based on trends
+            raw_sectors = {}
             for sector, base_share in shares.items():
                 sector_factor = SECTOR_TRENDS[sector](year)
-                # Sector emission = total * base_share * sector_trend
-                sector_value = country_total * base_share * sector_factor
+                raw_sectors[sector] = base_share * sector_factor
+                
+            # Normalize so they sum to 1.0, preserving the correct country_total
+            total_raw = sum(raw_sectors.values())
+            
+            for sector in shares.keys():
+                normalized_share = raw_sectors[sector] / total_raw
+                sector_value = country_total * normalized_share
                 result[country][year][sector] = round(sector_value, 2)
     
     return result

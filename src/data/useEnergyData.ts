@@ -50,8 +50,8 @@ export const useEnergyData = () => {
                         // Quadrant IDs (fixed, deterministic)
                         // 0: Affluent Warm, 1: Affluent Cold, 2: Developing Warm, 3: Developing Cold
                         const TYPOLOGY_NAMES = [
-                            'Wealthy Warm',
-                            'Wealthy Cold',
+                            'Affluent Warm',
+                            'Affluent Cold',
                             'Developing Warm',
                             'Developing Cold',
                         ];

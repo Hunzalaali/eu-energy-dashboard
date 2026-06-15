@@ -11,8 +11,8 @@ import { useInteraction } from '../context/InteractionContext';
  * Typology Radar Chart
  *
  * Displays the socioeconomic profile of the four 2×2 typology quadrants:
- *   • Wealthy Warm   — High GDP, Low HDD
- *   • Wealthy Cold   — High GDP, High HDD
+ *   • Affluent Warm   — High GDP, Low HDD
+ *   • Affluent Cold   — High GDP, High HDD
  *   • Developing Warm — Low GDP, Low HDD
  *   • Developing Cold — Low GDP, High HDD
  *
@@ -27,7 +27,7 @@ interface TypologyRadarChartProps {
 
 // Semantic colour palette matching the 2×2 quadrant order (IDs 0–3)
 const TYPO_COLORS = ['#ff922b', '#339af0', '#c92a2a', '#5f3dc4'];
-const TYPO_NAMES  = ['Wealthy Warm', 'Wealthy Cold', 'Developing Warm', 'Developing Cold'];
+const TYPO_NAMES  = ['Affluent Warm', 'Affluent Cold', 'Developing Warm', 'Developing Cold'];
 
 const FEATURES = ['gdp_pps', 'mfg_share', 'urb_rate', 'hdd', 'pop_density'] as const;
 const FEATURE_LABELS: Record<string, string> = {
