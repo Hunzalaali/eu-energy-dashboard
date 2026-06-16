@@ -12,10 +12,10 @@ interface ClusterRadarChartProps {
 }
 
 const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterNames }) => {
-    const { hoveredCountry, selectedCountry, selectedCluster } = useInteraction();
+    const { hoveredCountry, selectedCountry, selectedCluster, compareCountry } = useInteraction();
 
-    const { chartData, clusters, countryOverlay } = useMemo(() => {
-        if (!data || data.length === 0) return { chartData: [], clusters: [], countryOverlay: null };
+    const { chartData, clusters, countryOverlay, compareOverlay } = useMemo(() => {
+        if (!data || data.length === 0) return { chartData: [], clusters: [], countryOverlay: null, compareOverlay: null };
 
         const centroids = getClusterCentroids(data);
         const normalized = normalizeForRadar(data, centroids);
@@ -37,6 +37,21 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
             }
         }
 
+        // Compute normalized values for the comparison country to overlay
+        let compOverlay: Record<string, number> | null = null;
+        if (compareCountry) {
+            const compData = data.find(d => d.country === compareCountry);
+            if (compData) {
+                compOverlay = {};
+                FEATURES.forEach(f => {
+                    const values = data.map(d => Number(d[f]) || 0);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    compOverlay![f] = max > min ? ((Number(compData[f]) || 0) - min) / (max - min) : 0.5;
+                });
+            }
+        }
+
         const result = FEATURES.map(feature => {
             const entry: Record<string, number | string> = { subject: getMetricLabel(feature) };
             normalized.forEach(c => {
@@ -45,11 +60,14 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
             if (overlay) {
                 entry['Selected Country'] = overlay[feature];
             }
+            if (compOverlay) {
+                entry['Compare Country'] = compOverlay[feature];
+            }
             return entry;
         });
 
-        return { chartData: result, clusters: allClusters, countryOverlay: overlay };
-    }, [data, hoveredCountry, selectedCountry]);
+        return { chartData: result, clusters: allClusters, countryOverlay: overlay, compareOverlay: compOverlay };
+    }, [data, hoveredCountry, selectedCountry, compareCountry]);
 
     if (data.length === 0) return <Text>No data available</Text>;
 
@@ -58,7 +76,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
             <Title order={4} mb={4}>Energy Fingerprints by Cluster</Title>
             <Text size="xs" c="dimmed" mb="sm">
                 {(selectedCountry || hoveredCountry)
-                    ? `Comparing ${formatCountryName(selectedCountry || hoveredCountry)} (dashed red) against each cluster's average shape`
+                    ? `Comparing ${formatCountryName(selectedCountry || hoveredCountry)} (dashed red)${compareCountry ? ` and ${formatCountryName(compareCountry)} (dashed blue)` : ''} against each cluster's average shape`
                     : 'Each shape shows the average energy mix of a cluster. A wider shape = higher values across all indicators.'}
             </Text>
             <ResponsiveContainer width="100%" height={280}>
@@ -92,6 +110,19 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                             strokeDasharray="4 2"
                         />
                     )}
+
+                    {/* Comparison overlay line */}
+                    {compareOverlay && (
+                        <Radar
+                            name={formatCountryName(compareCountry) || 'Compare'}
+                            dataKey="Compare Country"
+                            stroke="#1c7ed6"
+                            fill="#1c7ed6"
+                            fillOpacity={0.08}
+                            strokeWidth={3}
+                            strokeDasharray="4 2"
+                        />
+                    )}
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                 </RadarChart>
             </ResponsiveContainer>
@@ -100,3 +131,4 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
 };
 
 export default ClusterRadarChart;
+
