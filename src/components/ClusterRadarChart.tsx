@@ -79,7 +79,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                     ? `Comparing ${formatCountryName(selectedCountry || hoveredCountry)} (dashed red)${compareCountry ? ` and ${formatCountryName(compareCountry)} (dashed blue)` : ''} against each cluster's average shape`
                     : 'Each shape shows the average energy mix of a cluster. A wider shape = higher values across all indicators.'}
             </Text>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={340}>
                 <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9 }} />
