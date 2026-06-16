@@ -249,15 +249,13 @@ const DashboardInner = () => {
 
                         {/* Details Row */}
                         <div style={{ display: 'flex', flexDirection: 'row', gap: 16, marginBottom: 16 }}>
-                            {!compareCountry && (
-                                <div className="chart-card" style={{ flex: '2' }}>
-                                    <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
-                                </div>
-                            )}
+                            <div className="chart-card" style={{ flex: compareCountry ? 1 : 2 }}>
+                                <ClusterRadarChart data={analyzedData} clusterNames={clusterNames} />
+                            </div>
 
                             {selectedCountry ? (
                                 compareCountry ? (
-                                    <div style={{ display: 'flex', flexDirection: 'row', gap: 16, flex: 3 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'row', gap: 16, flex: 2 }}>
                                         <div style={{ flex: 1 }}>
                                             <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
                                         </div>
