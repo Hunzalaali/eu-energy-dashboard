@@ -83,7 +83,7 @@ export const useSectoralData = (selectedCountry: string | null) => {
             ...d,
             target2030: baselineTotal * 0.45,   // -55% = keep 45% of 1990
             target2050: baselineTotal * 0.10,    // Net-zero ≈ 10% residual
-            emissionsVs2000: ((d.total - baselineTotal) / baselineTotal) * 100,
+            emissionsVs1990: ((d.total - baselineTotal) / baselineTotal) * 100,
         }));
     })();
 

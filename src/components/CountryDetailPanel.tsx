@@ -106,9 +106,9 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
                 <>
                     <Divider my="sm" />
                     <Group justify="space-between">
-                        <Text size="xs" c="dimmed">Emissions vs 2000</Text>
-                        <Text size="xs" fw={700} c={latestSectoral.emissionsVs2000 < 0 ? 'teal' : 'red'}>
-                            {latestSectoral.emissionsVs2000 > 0 ? '+' : ''}{latestSectoral.emissionsVs2000.toFixed(1)}%
+                        <Text size="xs" c="dimmed">Emissions vs 1990</Text>
+                        <Text size="xs" fw={700} c={latestSectoral.emissionsVs1990 < 0 ? 'teal' : 'red'}>
+                            {latestSectoral.emissionsVs1990 > 0 ? '+' : ''}{latestSectoral.emissionsVs1990.toFixed(1)}%
                         </Text>
                     </Group>
                     <Group justify="space-between">

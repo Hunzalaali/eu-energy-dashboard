@@ -8,16 +8,57 @@ interface GoalTrackingChartProps {
     selectedCountry: string | null;
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        const dataPoint = payload[0].payload;
+        
+        return (
+            <Paper shadow="md" p="sm" withBorder style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+                <Text fw={700} mb="xs">Year: {label}</Text>
+                {payload.map((p: any) => {
+                    if (p.value === undefined) return null;
+
+                    let percentageText = null;
+                    if (p.dataKey === 'total' && dataPoint.emissionsVs1990 !== undefined) {
+                        percentageText = `(${dataPoint.emissionsVs1990 > 0 ? '+' : ''}${dataPoint.emissionsVs1990.toFixed(1)}% vs 1990)`;
+                    } else if (p.dataKey === 'projectedTrend' && dataPoint.projectedTrendVs1990 !== undefined) {
+                        percentageText = `(${dataPoint.projectedTrendVs1990 > 0 ? '+' : ''}${dataPoint.projectedTrendVs1990.toFixed(1)}% vs 1990)`;
+                    }
+
+                    return (
+                        <div key={p.dataKey} style={{ color: p.color, fontSize: '12px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 600 }}>{p.name}:</span> {Number(p.value).toFixed(1)} MtCO₂eq
+                            {percentageText && (
+                                <span style={{ marginLeft: '6px', fontWeight: 'bold' }}>
+                                    {percentageText}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+            </Paper>
+        );
+    }
+    return null;
+};
+
 export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartProps) => {
 
     // Extend data to 2050 visually by adding empty points with just targets
     const chartData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
+        // We can reverse-engineer the 1990 baseline total from the 2030 target (which is 45% of baseline)
+        const baselineTotal = data[0].target2030 / 0.45;
+
         // Only show from 2010 onwards for consistency
         const base = [...data]
             .filter(d => d.year >= 2010)
-            .map(d => ({ ...d, projectedTrend: undefined as number | undefined }));
+            .map(d => ({ 
+                ...d, 
+                projectedTrend: undefined as number | undefined,
+                projectedTrendVs1990: undefined as number | undefined
+            }));
         if (base.length === 0) return [];
         const lastYear = base[base.length - 1];
 
@@ -32,20 +73,24 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
 
         // Start projection from the last actual point
         lastYear.projectedTrend = lastYear.total;
+        lastYear.projectedTrendVs1990 = lastYear.emissionsVs1990;
 
-        // Add pseudo-points for the targets to draw the dashed lines out
+        const proj2030 = Math.max(0, lastYear.total + slope * (2030 - lastYear.year));
         base.push({
             ...lastYear,
             year: 2030,
             total: undefined as any, // don't draw actual emissions line here
-            projectedTrend: Math.max(0, lastYear.total + slope * (2030 - lastYear.year)),
+            projectedTrend: proj2030,
+            projectedTrendVs1990: ((proj2030 - baselineTotal) / baselineTotal) * 100,
         });
 
+        const proj2050 = Math.max(0, lastYear.total + slope * (2050 - lastYear.year));
         base.push({
             ...lastYear,
             year: 2050,
             total: undefined as any,
-            projectedTrend: Math.max(0, lastYear.total + slope * (2050 - lastYear.year)),
+            projectedTrend: proj2050,
+            projectedTrendVs1990: ((proj2050 - baselineTotal) / baselineTotal) * 100,
         });
 
         return base;
@@ -73,7 +118,7 @@ export const GoalTrackingChart = ({ data, selectedCountry }: GoalTrackingChartPr
                         ticks={[2010, 2015, 2020, 2025, 2030, 2040, 2050]}
                     />
                     <YAxis tickFormatter={(val) => `${(val / 1000).toFixed(1)}k`} />
-                    <Tooltip formatter={(value: any) => value !== undefined ? Number(value).toFixed(1) : ''} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
 
                     {/* Actual trajectory */}

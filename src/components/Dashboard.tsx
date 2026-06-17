@@ -483,10 +483,10 @@ const KPIRow = ({ data, sectoralData, year, stabilityStats }: {
                 <div className="kpi-value positive" title="What percentage of energy comes from renewables (solar, wind, hydro) on average across all EU countries">{avgRenewable.toFixed(1)}%</div>
             </div>
             <div className="kpi-card">
-                <div className="kpi-label">Emissions vs. Year 2000</div>
-                <div className={`kpi-value ${(latestSectoral?.emissionsVs2000 ?? 0) < 0 ? 'positive' : 'negative'}`}
-                    title="How much CO₂ emissions have changed compared to the year 2000. Negative = good progress.">
-                    {latestSectoral?.emissionsVs2000 !== undefined ? `${latestSectoral.emissionsVs2000.toFixed(1)}%` : '—'}
+                <div className="kpi-label">Emissions vs. Year 1990</div>
+                <div className={`kpi-value ${(latestSectoral?.emissionsVs1990 ?? 0) < 0 ? 'positive' : 'negative'}`}
+                    title="How much CO₂ emissions have changed compared to the year 1990. Negative = good progress.">
+                    {latestSectoral?.emissionsVs1990 !== undefined ? `${latestSectoral.emissionsVs1990.toFixed(1)}%` : '—'}
                 </div>
             </div>
             <div className="kpi-card">

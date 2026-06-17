@@ -109,13 +109,13 @@ export interface SectoralEmissions {
  * Processed sectoral data with computed policy targets.
  *
  * Targets are derived from the EU's Fit for 55 package:
- *   - 2030 target: −55% vs 2000 baseline (European Climate Law, Regulation 2021/1119)
+ *   - 2030 target: −55% vs 1990 baseline (European Climate Law, Regulation 2021/1119)
  *   - 2050 target: Net-zero with ~10% residual (European Green Deal)
  */
 export interface SectoralDataWithTargets extends SectoralEmissions {
     target2030: number;
     target2050: number;
-    emissionsVs2000: number;  // Percentage change vs 2000 baseline
+    emissionsVs1990: number;  // Percentage change vs 1990 baseline
 }
 
 // ---------------------------------------------------------------------------
