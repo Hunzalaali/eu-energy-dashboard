@@ -31,6 +31,7 @@ import { CountryDetailPanel } from './CountryDetailPanel';
 import { DendrogramChart } from './DendrogramChart';
 import { ClusterContextProfile } from './ClusterContextProfile';
 import { CountryTrajectory } from './CountryTrajectory';
+import { ClusterBoxPlot } from './ClusterBoxPlot';
 
 const METRICS: string[] = [
     'renewable_share', 'energy_dependency', 'ghg_intensity',
@@ -352,12 +353,17 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 2: Consolidated Cluster Detail (Heatmap + Composition) */}
+                        {/* Row 2: Box Plot — within-cluster distributions */}
+                        <div className="chart-card" style={{ marginBottom: 16 }}>
+                            <ClusterBoxPlot data={analyzedData} clusterNames={clusterNames} />
+                        </div>
+
+                        {/* Row 3: Consolidated Cluster Detail (Heatmap + Composition) */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <HeatmapChart data={analyzedData} clusterNames={clusterNames} />
                         </div>
 
-                        {/* Row 3: Dendrogram (full width) */}
+                        {/* Row 4: Dendrogram (full width) */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <DendrogramChart data={analyzedData} k={4} clusterNames={clusterNames} />
                         </div>

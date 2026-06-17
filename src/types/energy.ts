@@ -20,7 +20,7 @@ export interface EnergyData {
     year: number;
     iso_alpha?: string;
 
-    // ── Primary energy indicators (6-dimensional profile) ──
+    // ── Primary energy indicators (7-dimensional clustering profile) ──
     renewable_share: number;
     energy_dependency: number;
     ghg_intensity: number;
