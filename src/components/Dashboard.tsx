@@ -56,7 +56,7 @@ const DashboardInner = () => {
     const [metric, setMetric] = useState<string>('renewable_share');
     const [mapMode, setMapMode] = useState<string>('cluster');
     const [view, setView] = useState<string>('overview');
-    const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry } = useInteraction();
+    const { selectedCountry, setSelectedCountry, compareCountry, setCompareCountry, selectedCluster, setSelectedCluster } = useInteraction();
 
     // ── Stable centroids: computed once from all-years country averages ────────
     const stableCentroids = useMemo<number[][]>(() => {
@@ -128,6 +128,7 @@ const DashboardInner = () => {
     const maxYear = useMemo(() => Math.max(...((data || []).map(d => d.year) || [2023])), [data]);
     const minYear = useMemo(() => Math.min(...((data || []).map(d => d.year) || [2010])), [data]);
     const countries = useMemo(() => Array.from(new Set((data || []).map(d => d.country))).sort(), [data]);
+    const clustersList = useMemo(() => Object.keys(clusterNames).map(k => Number(k)).sort(), [clusterNames]);
 
     return (
         <div className="dashboard-layout">
@@ -167,6 +168,22 @@ const DashboardInner = () => {
                             data={countries.map(c => ({ value: c, label: `${ISO_TO_NAME[c] || c} (${c})` }))}
                             value={selectedCountry}
                             onChange={setSelectedCountry}
+                            searchable clearable size="xs"
+                            styles={{
+                                input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
+                                dropdown: { background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' },
+                                option: { color: '#e2e8f0' },
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                        <label>Cluster Filter</label>
+                        <Select
+                            placeholder="All Clusters"
+                            data={clustersList.map(c => ({ value: String(c), label: clusterNames[c] || `Cluster ${c}` }))}
+                            value={selectedCluster !== null ? String(selectedCluster) : null}
+                            onChange={(val) => setSelectedCluster(val ? Number(val) : null)}
                             searchable clearable size="xs"
                             styles={{
                                 input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0' },
