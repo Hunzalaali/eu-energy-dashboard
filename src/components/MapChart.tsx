@@ -184,11 +184,10 @@ const MapChart: React.FC<MapChartProps> = ({
 
             <ComposableMap
                 projection="geoMercator"
-                projectionConfig={{ center: [15, 52], scale: 650 }}
-                // height='100%'
-                style={{ width: '100%', height: '100vh' }}
+                projectionConfig={{ center: [15, 53], scale: 580 }}
+                style={{ width: '100%', height: '650px' }}
             >
-                <ZoomableGroup zoom={1} center={[15, 52]}>
+                <ZoomableGroup zoom={1} center={[15, 53]}>
                     <Geographies geography={GEO_URL}>
                         {({ geographies }: { geographies: any[] }) =>
                             geographies
