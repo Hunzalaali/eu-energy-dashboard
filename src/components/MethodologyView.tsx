@@ -125,8 +125,8 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
             <Grid.Col span={12}>
                 <Title order={2} mb="xs">Methodology Validation</Title>
                 <Text size="sm" c="dimmed" mb="md">
-                    Systematic evaluation of clustering algorithms and parameter selection for EU-27 energy profile typologies ({year}). 
-                    Calculations are performed on cross-sectional data. Averaging 14 years of transition data mathematically blurs country trajectories, destroying the variance separation required by standard validation metrics (Silhouette, DBI, CH). Thus, we validate K=4 cross-sectionally before applying it to the stable global model.
+                    Cross sectional evaluation of clustering algorithms for EU-27 energy profiles ({year}). 
+                    Metrics are calculated on single year data to preserve variance separation, validating the K=4 parameter before applying it to the global transition model.
                 </Text>
             </Grid.Col>
 
@@ -196,8 +196,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                 <Paper shadow="xs" p="md" withBorder>
                     <Title order={4} mb="xs">Cluster Membership Comparison</Title>
                     <Text size="xs" c="dimmed" mb="md">
-                        How each algorithm assigns countries to clusters. Disagreements between algorithms highlight borderline cases.
-                        Agreement is evaluated between K-Means and Hierarchical after cluster-label alignment.
+                        Algorithm assignments across countries. Disagreements highlight borderline cases.
                     </Text>
                     {mappedComparison.length > 0 && (
                         <Table striped highlightOnHover withTableBorder withColumnBorders fz="xs">
@@ -353,27 +352,16 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                     <Text size="sm" component="div">
                         <ol style={{ paddingLeft: '1.2rem', margin: 0 }}>
                             <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>K=4 is identified as the optimal macro-partition</strong> through triangulated evidence: an inflection point in the Elbow Method, a local maximum in Silhouette score, and an inflection of diminishing returns in the Davies-Bouldin Index. This convergence justifies K=4 over overly simplistic (K=2) or highly fragmented (K=8) typologies.
+                                <strong>K=4 is the optimal macro-partition</strong>: Supported by inflection points in the Elbow Method, Davies-Bouldin Index, and a local maximum in the Silhouette score.
                             </li>
                             <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>K-Means and Ward's hierarchical clustering</strong> produce similar groupings,
-                                demonstrating structural robustness independent of algorithmic choice.
+                                <strong>Algorithmic Robustness</strong>: K-Means and Hierarchical clustering produce highly similar groupings, proving stability independent of the chosen algorithm.
                             </li>
                             <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>DBSCAN reveals density structure</strong>, potentially identifying outlier countries
-                                (e.g., Luxembourg, Malta) whose energy profiles are structurally distinct from all clusters.
-                            </li>
-                            <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>Consensus K-Means</strong> (20 restarts, best-of-N by inertia) mitigates
-                                initialization sensitivity, a known limitation of standard K-Means (Arthur & Vassilvitskii, 2007).
+                                <strong>Consensus K-Means</strong>: Running 20 restarts mitigates initialization sensitivity inherent to standard K-Means.
                             </li>
                             <li style={{ marginTop: '0.5rem' }}>
-                                <strong>Temporal stability via multi-year consensus centroids</strong>: instead of
-                                clustering each year independently (which causes shifting definitions of what constitutes a cluster year-over-year), centroids are established using each country's <em>average</em> feature
-                                vector across all years (2010–2023). Per-year assignments are then made by nearest-centroid
-                                projection. This establishes a fixed coordinate system for the transition, ensuring a country only changes cluster when its actual energy profile
-                                structurally evolves — rather than the cluster boundaries moving around it. The <em>Temporal Trajectories</em> view
-                                visualises this structural stability.
+                                <strong>Temporal Stability</strong>: Centroids are established using 14-year feature averages rather than per-year clustering. This creates a fixed coordinate system, ensuring countries only switch clusters when their energy profiles structurally evolve.
                             </li>
                         </ol>
                     </Text>
