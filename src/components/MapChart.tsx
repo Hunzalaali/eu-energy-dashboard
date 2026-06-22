@@ -10,7 +10,7 @@ const GEO_URL = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
 
 const EUROPE_COUNTRIES = [
     "Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herz.",
-    "Bulgaria", "Croatia", "Cyprus", "Czech Rep.", "Denmark", "Estonia",
+    "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia",
     "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland",
     "Italy", "Kosovo", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg",
     "Macedonia", "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands",
@@ -22,7 +22,7 @@ const EUROPE_COUNTRIES = [
 
 const NAME_TO_ISO: { [key: string]: string } = {
     "Austria": "AT", "Belgium": "BE", "Bulgaria": "BG", "Cyprus": "CY",
-    "Czech Rep.": "CZ", "Germany": "DE", "Denmark": "DK", "Estonia": "EE",
+    "Czechia": "CZ", "Germany": "DE", "Denmark": "DK", "Estonia": "EE",
     "Greece": "EL", "Spain": "ES", "Finland": "FI", "France": "FR",
     "Croatia": "HR", "Hungary": "HU", "Ireland": "IE", "Italy": "IT",
     "Lithuania": "LT", "Luxembourg": "LU", "Latvia": "LV", "Malta": "MT",
