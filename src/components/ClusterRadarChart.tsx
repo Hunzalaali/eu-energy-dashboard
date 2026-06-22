@@ -76,7 +76,7 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
             <Title order={4} mb={4}>Energy Fingerprints by Cluster</Title>
             <Text size="xs" c="dimmed" mb="sm">
                 {(selectedCountry || hoveredCountry)
-                    ? `Comparing ${formatCountryName(selectedCountry || hoveredCountry)} (dashed red)${compareCountry ? ` and ${formatCountryName(compareCountry)} (dashed blue)` : ''} against each cluster's average shape`
+                    ? `Comparing ${formatCountryName(selectedCountry || hoveredCountry)} (dashed yellow)${compareCountry ? ` and ${formatCountryName(compareCountry)} (dashed orange)` : ''} against each cluster's average shape`
                     : 'Each shape shows the average energy mix of a cluster. A wider shape = higher values across all indicators.'}
             </Text>
             <ResponsiveContainer width="100%" height={340}>
@@ -103,8 +103,8 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                         <Radar
                             name={formatCountryName(selectedCountry || hoveredCountry) || 'Country'}
                             dataKey="Selected Country"
-                            stroke="#e03131"
-                            fill="#e03131"
+                            stroke="#FFDE21"
+                            fill="#FFDE21"
                             fillOpacity={0.08}
                             strokeWidth={3}
                             strokeDasharray="4 2"
@@ -116,8 +116,8 @@ const ClusterRadarChart: React.FC<ClusterRadarChartProps> = ({ data, clusterName
                         <Radar
                             name={formatCountryName(compareCountry) || 'Compare'}
                             dataKey="Compare Country"
-                            stroke="#1c7ed6"
-                            fill="#1c7ed6"
+                            stroke="#f59f00"
+                            fill="#f59f00"
                             fillOpacity={0.08}
                             strokeWidth={3}
                             strokeDasharray="4 2"
