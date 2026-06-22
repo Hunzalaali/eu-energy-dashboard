@@ -80,9 +80,9 @@ const MapChart: React.FC<MapChartProps> = ({
     data, metric, mode = 'cluster',
     showLegend = true, clusterNames,
 }) => {
-    const {
-        hoveredCountry, selectedCountry, selectedCluster,
-        setHoveredCountry, toggleCountry, toggleCluster,
+    const { 
+        hoveredCountry, selectedCountry, compareCountry, selectedCluster, 
+        setHoveredCountry, toggleCountry, toggleCluster
     } = useInteraction();
 
     const { colorScale, min, max } = useMemo(() => {
@@ -211,8 +211,9 @@ const MapChart: React.FC<MapChartProps> = ({
                                     // Interaction states
                                     const isHovered = iso === hoveredCountry || geo.properties.name === hoveredCountry;
                                     const isSelected = iso === selectedCountry || geo.properties.name === selectedCountry;
+                                    const isCompare = iso === compareCountry || geo.properties.name === compareCountry;
                                     const isClusterDimmed = selectedCluster !== null && isEU && dataPoint?.cluster !== selectedCluster;
-                                    const isHoverHighlight = hoveredCountry && iso !== hoveredCountry && !isSelected;
+                                    const isHoverHighlight = hoveredCountry && iso !== hoveredCountry && !isSelected && !isCompare;
 
                                     // Final opacity
                                     let opacity = 1;
@@ -231,8 +232,8 @@ const MapChart: React.FC<MapChartProps> = ({
                                                     default: {
                                                         outline: "none",
                                                         fill: isClusterDimmed ? '#e9ecef' : fill,
-                                                        stroke: isSelected ? '#e03131' : isHovered ? '#1971c2' : '#fff',
-                                                        strokeWidth: isSelected ? 2.5 : isHovered ? 2 : 0.5,
+                                                        stroke: isSelected ? '#FFDE21' : isCompare ? '#f59f00' : isHovered ? '#898989' : '#fff',
+                                                        strokeWidth: isSelected || isCompare ? 2.5 : isHovered ? 2 : 0.5,
                                                         opacity,
                                                         transition: 'all 0.2s ease',
                                                         filter: isHovered ? 'brightness(1.1)' : 'none',
