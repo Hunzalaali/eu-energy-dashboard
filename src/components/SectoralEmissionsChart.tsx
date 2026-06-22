@@ -23,7 +23,7 @@ export const SectoralEmissionsChart = ({ data, selectedCountry, highlightedSecto
     return (
         <Paper shadow="sm" p="md" withBorder h="100%">
             <Box mb="sm">
-                <Title order={5}>Sectoral Emissions Breakdown</Title>
+                <Title order={5}>Sectoral Emissions Breakdown (MtCO₂eq)</Title>
                 <Text size="xs" c="dimmed">
                     {selectedCountry ? `Decarbonization pathway for ${formatCountryName(selectedCountry)}` : 'EU Aggregate Approximation'} (2010–2023)
                 </Text>
@@ -37,7 +37,7 @@ export const SectoralEmissionsChart = ({ data, selectedCountry, highlightedSecto
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="year" minTickGap={20} />
                     <YAxis tickFormatter={(val) => `${(val / 1000).toFixed(1)}k`} />
-                    <Tooltip formatter={(value: any) => Number(value).toFixed(1)} />
+                    <Tooltip formatter={(value: any) => `${Number(value).toFixed(1)} MtCO₂eq`} />
                     <Legend />
                     <Area
                         type="monotone"

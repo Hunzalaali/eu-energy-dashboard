@@ -55,9 +55,9 @@ def fetch_eurostat_data():
     base_url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data"
     dataset = "env_air_gge"
     
-    # Construct filter: freq.airpol.src_crf.unit.geo
-    # A = Annual, GHG = total greenhouse gases, sectors, MIO_T = million tonnes, countries
-    filter_str = f"A.GHG.{sectors}.MIO_T.{countries}"
+    # Construct filter: freq.unit.airpol.src_crf.geo
+    # A = Annual, MIO_T = million tonnes, GHG = total greenhouse gases, sectors, countries
+    filter_str = f"A.MIO_T.GHG.{sectors}.{countries}"
     
     url = f"{base_url}/{dataset}/{filter_str}?format=SDMX-CSV&compressed=false"
     
