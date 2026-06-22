@@ -275,15 +275,15 @@ const DashboardInner = () => {
                                 compareCountry ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 2 }}>
                                         <div style={{ flex: 1 }}>
-                                            <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                            <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} year={year} />
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} />
+                                            <CountryDetailPanel data={analyzedData} sectoralData={compareSectoralData} clusterNames={clusterNames} countryCode={compareCountry} onClose={() => setCompareCountry(null)} year={year} />
                                         </div>
                                     </div>
                                 ) : (
                                     <div style={{ flex: 2 }}>
-                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} />
+                                        <CountryDetailPanel data={analyzedData} sectoralData={sectoralData} clusterNames={clusterNames} year={year} />
                                     </div>
                                 )
                             ) : (

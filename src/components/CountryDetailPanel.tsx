@@ -11,6 +11,7 @@ interface CountryDetailPanelProps {
     clusterNames: Record<number, string>;
     countryCode?: string | null;
     onClose?: () => void;
+    year?: number;
 }
 
 const FEATURE_ICONS: Record<string, any> = {
@@ -32,7 +33,7 @@ const FEATURE_COLORS: Record<string, string> = {
     per_capita_toe: 'blue',
 };
 
-export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCode, onClose }: CountryDetailPanelProps) => {
+export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCode, onClose, year }: CountryDetailPanelProps) => {
     const { selectedCountry, setSelectedCountry } = useInteraction();
     const effectiveCountry = countryCode !== undefined ? countryCode : selectedCountry;
 
@@ -41,8 +42,9 @@ export const CountryDetailPanel = ({ data, sectoralData, clusterNames, countryCo
     const countryData = data.find(d => d.country === effectiveCountry);
     if (!countryData) return null;
 
-    const latestSectoral = sectoralData.length > 0
-        ? sectoralData[sectoralData.length - 1] : null;
+    const latestSectoral = year
+        ? sectoralData.find(d => d.year === year) || null
+        : (sectoralData.length > 0 ? sectoralData[sectoralData.length - 1] : null);
 
     // Compute percentile rank for each feature
     const percentiles: Record<string, number> = {};
