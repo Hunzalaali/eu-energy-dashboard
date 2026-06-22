@@ -21,7 +21,7 @@ export const useSectoralData = (selectedCountry: string | null) => {
                     dynamicTyping: true,
                     complete: (results: Papa.ParseResult<SectoralEmissions>) => {
                         const validData = (results.data as SectoralEmissions[]).filter(
-                            row => row.country && row.year && row.total > 0
+                            row => row.country && row.year && row.year <= 2023 && row.total > 0
                         );
                         setRawData(validData);
                         setLoading(false);
