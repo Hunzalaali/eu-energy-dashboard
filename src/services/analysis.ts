@@ -739,11 +739,23 @@ export const getBoxPlotStats = (data: ClusteredData[], feature: string, cluster:
 
     if (values.length === 0) return null;
 
-    const q1 = values[Math.floor(values.length * 0.25)];
-    const median = values[Math.floor(values.length * 0.5)];
-    const q3 = values[Math.floor(values.length * 0.75)];
     const min = values[0];
     const max = values[values.length - 1];
+
+    const getQuantile = (arr: number[], q: number) => {
+        const pos = (arr.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (arr[base + 1] !== undefined) {
+            return arr[base] + rest * (arr[base + 1] - arr[base]);
+        } else {
+            return arr[base];
+        }
+    };
+
+    const q1 = getQuantile(values, 0.25);
+    const median = getQuantile(values, 0.5);
+    const q3 = getQuantile(values, 0.75);
 
     return { min, q1, median, q3, max };
 };
