@@ -135,7 +135,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                 <Paper shadow="xs" p="md" withBorder>
                     <Title order={4} mb="xs">Algorithm Comparison</Title>
                     <Text size="xs" c="dimmed" mb="md">
-                        Three clustering algorithms evaluated on the 14-year averaged EU-27 energy indicators.
+                        Three clustering algorithms evaluated on the 14 year averaged EU-27 energy indicators.
                         Best value per metric highlighted in green. DBSCAN discovers K automatically.
                     </Text>
                     <Table striped highlightOnHover withTableBorder withColumnBorders>
@@ -307,7 +307,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                 <Paper shadow="xs" p="md" withBorder h={420}>
                     <Title order={4} mb="xs">Davies-Bouldin Index</Title>
                     <Text size="xs" c="dimmed" mb="md">
-                        Average cluster similarity ratio (Davies & Bouldin, 1979). Lower values indicate better-separated clusters.
+                        Average cluster similarity ratio (Davies & Bouldin, 1979). Lower values indicate better separated clusters.
                     </Text>
                     <ResponsiveContainer width="100%" height={300}>
                         <ComposedChart data={metrics}>
@@ -327,7 +327,7 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                 <Paper shadow="xs" p="md" withBorder h={420}>
                     <Title order={4} mb="xs">Calinski-Harabasz Index</Title>
                     <Text size="xs" c="dimmed" mb="md">
-                        Variance ratio criterion (Calinski & Harabasz, 1974). Higher values indicate better-defined, well-separated clusters.
+                        Variance ratio criterion (Calinski & Harabasz, 1974). Higher values indicate better defined, well separated clusters.
                     </Text>
                     <ResponsiveContainer width="100%" height={300}>
                         <ComposedChart data={metrics}>
@@ -342,31 +342,6 @@ export const MethodologyView = ({ data, year }: MethodologyViewProps) => {
                 </Paper>
             </Grid.Col>
 
-            {/* Interpretation */}
-            <Grid.Col span={12}>
-                <Paper shadow="xs" p="md" withBorder>
-                    <Title order={4} mb="xs">Methodological Interpretation</Title>
-                    <Text size="sm" mb="sm">
-                        Based on four complementary validation metrics across three clustering algorithms:
-                    </Text>
-                    <Text size="sm" component="div">
-                        <ol style={{ paddingLeft: '1.2rem', margin: 0 }}>
-                            <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>K=4 is the optimal macro-partition</strong>: Supported by inflection points in the Elbow Method, Davies-Bouldin Index, and a local maximum in the Silhouette score.
-                            </li>
-                            <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>Algorithmic Robustness</strong>: K-Means and Hierarchical clustering produce highly similar groupings, proving stability independent of the chosen algorithm.
-                            </li>
-                            <li style={{ marginBottom: '0.5rem' }}>
-                                <strong>Consensus K-Means</strong>: Running 20 restarts mitigates initialization sensitivity inherent to standard K-Means.
-                            </li>
-                            <li style={{ marginTop: '0.5rem' }}>
-                                <strong>Temporal Stability</strong>: Centroids are established using 14-year feature averages rather than per-year clustering. This creates a fixed coordinate system, ensuring countries only switch clusters when their energy profiles structurally evolve.
-                            </li>
-                        </ol>
-                    </Text>
-                </Paper>
-            </Grid.Col>
         </Grid>
     );
 };
