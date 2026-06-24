@@ -388,8 +388,6 @@ const DashboardInner = () => {
                     </>
                 )}
 
-                {/* ════════════════ HEATMAP — removed as separate tab ════════════════ */}
-
                 {/* ════════════════ TYPOLOGIES ════════════════ */}
                 {view === 'typologies' && (
                     <>
@@ -416,7 +414,7 @@ const DashboardInner = () => {
                             </div>
                         </div>
 
-                        {/* Row 2: Cluster Context Profile — all 5 secondary variables (thesis §5.7) */}
+                        {/* Row 2: Cluster Context Profile — all 5 secondary variables */}
                         <div className="chart-card" style={{ marginBottom: 16 }}>
                             <ClusterContextProfile
                                 typoData={data || []}

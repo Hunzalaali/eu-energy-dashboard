@@ -7,19 +7,6 @@ import { Paper, Title, Text, Group, Badge } from '@mantine/core';
 import type { EnergyData } from '../data/useEnergyData';
 import { useInteraction } from '../context/InteractionContext';
 
-/**
- * Typology Radar Chart
- *
- * Displays the socioeconomic profile of the four 2×2 typology quadrants:
- *   • Affluent Warm   — High GDP, Low HDD
- *   • Affluent Cold   — High GDP, High HDD
- *   • Developing Warm — Low GDP, Low HDD
- *   • Developing Cold — Low GDP, High HDD
- *
- * Axes plotted are the five structural context features so users can see
- * what makes each quadrant structurally distinct.
- */
-
 interface TypologyRadarChartProps {
     data: EnergyData[] | null | undefined;
     year: number;

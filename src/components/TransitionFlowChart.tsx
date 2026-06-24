@@ -9,21 +9,6 @@ import { getClusterColorById } from '../utils/clusterColors';
 import { useInteraction } from '../context/InteractionContext';
 import { formatCountryName } from './MapChart';
 
-/**
- * Transition Flow Chart — Cluster Evolution Visualization
- *
- * Two modes:
- *  1. Aggregate (no country selected): ThemeRiver-style stacked area chart
- *     showing how many countries belong to each cluster per year.
- *     Reference: Rodrigues et al. (2017). Visualization of Time Series Data
- *     with Spatial Context. VINCI '17. DOI:10.1145/3105971.3105982
- *
- *  2. Country selected: SVG Swimlane storyline showing the country's
- *     trajectory through cluster lanes over time.
- *     Reference: Hulstein et al. (2022). Geo-Storylines: Integrating
- *     Geographic Maps with Storyline Visualizations.
- */
-
 interface TransitionFlowChartProps {
     data: ClusteredData[];
     selectedCountry: string | null;

@@ -66,7 +66,7 @@ export const EnergyTrendsChart = ({
         <Paper shadow="xs" p="md" withBorder h="100%">
             <Title order={4} mb="xs">Temporal Evolution: {getMetricLabel(metric)}</Title>
             <Text size="xs" c="dimmed" mb="md">
-                Dashed cluster averages show how each typology group evolved.
+                Dashed cluster averages show how each cluster evolved.
                 {selectedCountry ? ` Solid line = ${formatCountryName(selectedCountry)}.` : ' Select a country in the sidebar to highlight it.'}
             </Text>
 

@@ -5,23 +5,6 @@ import { hierarchicalClustering, type DendrogramNode } from '../services/hierarc
 import { useInteraction } from '../context/InteractionContext';
 import { getClusterColorById } from '../utils/clusterColors';
 
-/**
- * Dendrogram Chart — Hierarchical Clustering Tree Visualization
- *
- * Renders Ward's agglomerative merge tree as a bottom-up dendrogram.
- * The height of each merge represents the Ward distance (within-cluster
- * variance increase) at that step.
- *
- * A horizontal cut line at the K=4 threshold shows where the tree is
- * "cut" to produce the final 4 clusters, directly supporting the
- * thesis argument for the chosen number of clusters.
- *
- * Reference:
- *   Ward, J.H. (1963). "Hierarchical Grouping to Optimize an Objective Function."
- *   Journal of the American Statistical Association, 58(301), 236-244.
- */
-
-
 
 interface DendrogramChartProps {
     data: ClusteredData[];

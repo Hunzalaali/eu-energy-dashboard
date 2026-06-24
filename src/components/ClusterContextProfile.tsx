@@ -6,16 +6,6 @@ import { getClusterColorById } from '../utils/clusterColors';
 import { useInteraction } from '../context/InteractionContext';
 import { formatCountryName } from './MapChart';
 
-/**
- * Cluster Socioeconomic Context Profile
- *
- * Shows mean values of all 5 secondary characterisation variables
- * (from thesis Section 3.3) per energy cluster, answering the question
- * "why do these countries cluster together?"
- *
- * Reference: Neto-Bradley et al. (2021). Energy transition pathways
- * using mixed-methods cluster analysis. Energy Strategy Reviews, 38, 100699.
- */
 
 const SECONDARY_VARS: { key: string; label: string; format: (v: number) => string }[] = [
     { key: 'gdp_pps',     label: 'GDP per capita (PPS)',       format: v => `€${Math.round(v).toLocaleString()}` },
@@ -108,8 +98,7 @@ export const ClusterContextProfile = ({ typoData, energyData, energyClusterNames
             <Box mb="sm">
                 <Title order={5}>Cluster Socioeconomic Context ({year})</Title>
                 <Text size="xs" c="dimmed">
-                    Mean structural context variables per energy cluster explains <em>why</em> countries group together.
-                    Click a cluster header to filter all views.
+                    Mean structural context variables per energy cluster explains why countries group together.
                 </Text>
             </Box>
 

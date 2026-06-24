@@ -5,14 +5,6 @@ import { type ClusteredData, FEATURES, getMetricLabel } from '../services/analys
 import { useInteraction } from '../context/InteractionContext';
 import { getClusterColorById } from '../utils/clusterColors';
 
-/**
- * Country × Indicator Heatmap with hierarchical cluster ordering and headers.
- * 
- * Visualizes the multivariate energy profile of all EU-27 countries
- * as a color-coded matrix. Rows are grouped and punctuated by cluster
- * assignment headers, merging heatmap and cluster composition into a single, cohesive view.
- */
-
 const DIVERGING_COLORS = [
     '#2166ac', '#4393c3', '#92c5de', '#d1e5f0',
     '#f7f7f7',

@@ -16,10 +16,6 @@ export const FEATURES = [
     'nuclear_share',
 ];
 
-// Dead code removed: loadData(), performAnalysis() — replaced by
-// useEnergyData hook and performStableAnalysis() respectively.
-
-// ClusterCentroid type now imported from types/energy.ts
 
 export const getClusterCentroids = (data: ClusteredData[]): ClusterCentroid[] => {
     const clusters = Array.from(new Set(data.map(d => d.cluster))).sort();
@@ -27,11 +23,6 @@ export const getClusterCentroids = (data: ClusteredData[]): ClusterCentroid[] =>
     return clusters.map(clusterId => {
         const clusterPoints = data.filter(d => d.cluster === clusterId);
         const centroid: ClusterCentroid = { cluster: clusterId };
-
-        // Calculate mean for each feature (unscaled for readability in Radar, or scaled?)
-        // Usually Radar charts are better with normalized data (0-1) or Z-scores, 
-        // but for interpretation, raw values are often better -- HOWEVER, they have vastly different scales.
-        // Let's normalize to 0-1 range based on the GLOBAL min/max of that year.
 
         FEATURES.forEach(feature => {
             const sum = clusterPoints.reduce((acc, curr) => acc + (Number(curr[feature]) || 0), 0);
@@ -43,7 +34,6 @@ export const getClusterCentroids = (data: ClusteredData[]): ClusterCentroid[] =>
 };
 
 export const normalizeForRadar = (data: ClusteredData[], centroids: ClusterCentroid[]): ClusterCentroid[] => {
-    // We need to normalize the centroids to 0-1 relative to the dataset's min/max for the radar chart to look good.
     const normalizedCentroids: ClusterCentroid[] = centroids.map(c => ({ ...c })); // Deep copy-ish
 
     FEATURES.forEach(feature => {
@@ -94,24 +84,10 @@ export const reclusterData = (data: ClusteredData[], features: string[], k: numb
     }
 };
 
-// Dead code removed: performTimeSeriesAnalysis() — unused, superseded by
-// buildStableCentroids + performStableAnalysis.
-
 // ---------------------------------------------------------------------------
 // STABLE CLUSTERING
 // ---------------------------------------------------------------------------
 
-/**
- * Build stable cluster centroids from the full time-series dataset.
- *
- * Instead of clustering each year independently (which leads to label
- * instability due to random K-Means initialisation), we cluster one
- * *average* feature vector per country computed across all available years.
- * The resulting centroids are fixed and reused for every year.
- *
- * Returns centroids sorted ascending by renewable_share so that cluster 0
- * is always the least-renewable group and cluster k-1 is always the most.
- */
 export const buildStableCentroids = (data: EnergyData[], k: number = 4): number[][] => {
     const countries = Array.from(new Set(data.map(d => d.country)));
 
@@ -158,11 +134,6 @@ export const buildStableCentroids = (data: EnergyData[], k: number = 4): number[
 
 /**
  * Perform stable energy-cluster analysis for a single year.
- *
- * Uses pre-built stable centroids (from buildStableCentroids) so that
- * cluster identities are consistent across years — a country only changes
- * cluster when its actual energy profile drifts, not due to random seed
- * differences.
  */
 const getCountryRollingFeatures = (
     data: EnergyData[],
@@ -288,11 +259,6 @@ const euclideanDistance = (a: number[], b: number[]) => {
 /**
  * Davies-Bouldin Index (DBI)
  * 
- * Measures the average "similarity" between each cluster and its most similar cluster.
- * Lower values indicate better clustering (well-separated, compact clusters).
- * 
- * Reference: Davies, D.L. & Bouldin, D.W. (1979). "A Cluster Separation Measure."
- * IEEE Transactions on Pattern Analysis and Machine Intelligence, PAMI-1(2), 224-227.
  */
 const calculateDBI = (data: number[][], clusters: number[], k: number): number => {
     // Compute centroids
@@ -345,11 +311,6 @@ const calculateDBI = (data: number[][], clusters: number[], k: number): number =
 /**
  * Calinski-Harabasz Index (CH Index / Variance Ratio Criterion)
  * 
- * Ratio of between-cluster dispersion to within-cluster dispersion.
- * Higher values indicate better-defined clusters.
- * 
- * Reference: Calinski, T. & Harabasz, J. (1974). "A dendrite method for cluster analysis."
- * Communications in Statistics, 3(1), 1-27.
  */
 const calculateCH = (data: number[][], clusters: number[], k: number): number => {
     const n = data.length;
@@ -479,25 +440,6 @@ export const calculateClusterMetrics = (data: EnergyData[], year: number, kRange
 
 /**
  * Z-score based cluster naming.
- * 
- * Instead of hardcoded thresholds, this computes the z-score of each
- * feature's centroid relative to the overall mean. Features with |z| > 1.0
- * are considered "distinctive" for that cluster.
- * 
- * This is more principled and generalizable than the previous approach.
- */
-/**
- * Z-score based cluster naming — energy-mix features prioritised.
- *
- * The naming deliberately weights energy-mix features (renewable_share,
- * fossil_share, nuclear_share, ghg_intensity) more heavily than the
- * supply-chain feature (energy_dependency). per_capita_toe is excluded
- * from naming entirely (weight = 0) because it measures consumption
- * volume rather than transition strategy — a country can have low
- * per-capita consumption due to economic size or climate, not because
- * of any deliberate energy policy.
- *
- * Reference: inspired by Kaufman & Rousseeuw (1990) cluster characterisation.
  */
 export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, string> => {
     const clusters = Array.from(new Set(data.map(d => d.cluster))).sort();
@@ -515,12 +457,6 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
         globalStds[f] = Math.sqrt(variance) || 1;
     });
 
-    // Naming is driven exclusively by energy SOURCE composition (renewable,
-    // fossil, nuclear) with ghg_intensity as a secondary emissions signal.
-    // All other features are zeroed out:
-    //   - energy_intensity: economic efficiency metric, not source composition
-    //   - per_capita_toe: consumption volume, not transition strategy
-    //   - energy_dependency: supply-chain metric (where energy comes from, not what kind)
     const featureWeight: Record<string, number> = {
         'renewable_share':   1.0,   // primary — energy source
         'fossil_share':      1.0,   // primary — energy source
@@ -629,8 +565,6 @@ export const assignClusterNamesZScore = (data: ClusteredData[]): Record<number, 
     return names;
 };
 
-// Dead code removed: assignClusterNames() — heuristic-based, superseded by
-// assignClusterNamesZScore() which uses weighted z-scores for principled naming.
 
 
 /**

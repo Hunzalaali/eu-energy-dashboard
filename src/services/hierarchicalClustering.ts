@@ -1,17 +1,3 @@
-/**
- * Hierarchical Agglomerative Clustering — Ward's Method
- * 
- * Ward's method minimizes the total within-cluster variance at each merge step.
- * It produces balanced, compact clusters and is widely used in EU energy research
- * (Anđelinović et al., 2026; Chicco, 2012).
- * 
- * This implementation also generates a dendrogram data structure for visualization.
- * 
- * Reference:
- *   Ward, J.H. (1963). "Hierarchical Grouping to Optimize an Objective Function."
- *   Journal of the American Statistical Association, 58(301), 236-244.
- */
-
 /** A node in the dendrogram tree */
 export interface DendrogramNode {
     id: number;

@@ -1,23 +1,3 @@
-/**
- * DBSCAN (Density-Based Spatial Clustering of Applications with Noise)
- * 
- * Unlike K-Means, DBSCAN does not require specifying the number of clusters.
- * It discovers clusters of arbitrary shape and identifies outlier points (noise).
- * 
- * For EU energy data, this is valuable because:
- * - France's unique nuclear profile may be an outlier, not fitting any cluster
- * - Small island states (Malta, Cyprus) may have unique profiles
- * - DBSCAN reveals whether the "4 clusters" assumption is truly valid
- * 
- * Parameters:
- * - epsilon (ε): Maximum distance between two points to be considered neighbors
- * - minPoints: Minimum number of points required to form a dense region (cluster)
- * 
- * Reference:
- *   Ester, M. et al. (1996). "A Density-Based Algorithm for Discovering Clusters
- *   in Large Spatial Databases with Noise." KDD-96, pp. 226-231.
- */
-
 export interface DBSCANResult {
     /** Cluster assignments (-1 = noise/outlier, 0+ = cluster ID) */
     assignments: number[];

@@ -1,14 +1,4 @@
-/**
- * Predefined, semantically meaningful colors for each cluster name.
- *
- * Colors are chosen to be:
- *  - Thematically appropriate (green = renewables, red = carbon-heavy, etc.)
- *  - Visually distinct from one another
- *  - Consistent across all charts and views in the dashboard
- *
- * The matching is keyword-based so it works for both the heuristic names
- * (e.g. "Green Pioneers") and the z-score composite names (e.g. "Green & Efficient").
- */
+
 
 /** Exact-match colour map — checked first */
 const EXACT_COLORS: Record<string, string> = {

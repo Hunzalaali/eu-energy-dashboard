@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import type { EnergyData } from '../types/energy';
 
-// Re-export so existing imports like `import { EnergyData } from '../data/useEnergyData'` still work
 export type { EnergyData } from '../types/energy';
 
 export const useEnergyData = () => {
@@ -26,16 +25,6 @@ export const useEnergyData = () => {
                         // We use a principled 2×2 matrix based on two orthogonal structural dimensions:
                         //   Axis 1 — Economic Development: GDP per capita (PPS)
                         //   Axis 2 — Climate Energy Context: Heating Degree Days (HDD)
-                        //
-                        // These two axes are theoretically grounded (economic capacity to invest
-                        // in transition × structural heating/cooling demand), non-overlapping,
-                        // and directly relevant to energy policy analysis.
-                        //
-                        // The four typologies:
-                        //   Affluent Warm   (High GDP, Low HDD)  — e.g. Spain, Portugal
-                        //   Affluent Cold   (High GDP, High HDD) — e.g. Sweden, Germany
-                        //   Developing Warm (Low GDP, Low HDD)   — e.g. Cyprus, Malta
-                        //   Developing Cold (Low GDP, High HDD)  — e.g. Poland, Romania
 
                         const contextRows = validData.filter(
                             row => row.year === 2023 && row.gdp_pps !== undefined && row.hdd !== undefined

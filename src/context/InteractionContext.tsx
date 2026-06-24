@@ -1,15 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
-/**
- * Interaction Context — Shared state for Coordinated Multiple Views (CMV)
- * 
- * This implements the brushing & linking pattern described by:
- *   Roberts, J.C. (2007). "State of the Art: Coordinated & Multiple Views." CMV '07.
- * 
- * Any chart can write to this context (e.g., hovering a country on the map),
- * and all other charts read from it to update their visual state accordingly.
- */
-
 export interface InteractionState {
     /** Currently hovered country ISO code (null = no hover) */
     hoveredCountry: string | null;
